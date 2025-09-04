@@ -3,7 +3,7 @@ import { format, isToday } from 'date-fns'
 import { Plus, Clock } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import TaskModal from '../components/TaskModal'
-import { getTodayDateString } from '../utils/dateUtils'
+import { getTodayDateString, getTomorrowDateString } from '../utils/dateUtils'
 import './TodayPage.css'
 
 function TodayPage() {
@@ -33,7 +33,7 @@ function TodayPage() {
     try {
       await addTask({
         ...taskData,
-        date: getTodayDateString()
+        date: getTomorrowDateString() // Add 24 hours to today's date
       })
       setShowTaskModal(false)
     } catch (error) {

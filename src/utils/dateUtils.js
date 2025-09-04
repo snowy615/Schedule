@@ -17,3 +17,26 @@ export function getTodayDateString() {
   const day = String(today.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
+
+// Utility function to add 24 hours (1 day) to a date and format for API
+export function formatDateForAPIWithDelay(date) {
+  // Create a new date object and add 24 hours (1 day)
+  const delayedDate = new Date(date)
+  delayedDate.setDate(delayedDate.getDate() + 1)
+  
+  // Use local timezone components to ensure the date doesn't shift
+  const year = delayedDate.getFullYear()
+  const month = String(delayedDate.getMonth() + 1).padStart(2, '0')
+  const day = String(delayedDate.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// Utility function to get tomorrow's date in YYYY-MM-DD format (local timezone)
+export function getTomorrowDateString() {
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const year = tomorrow.getFullYear()
+  const month = String(tomorrow.getMonth() + 1).padStart(2, '0')
+  const day = String(tomorrow.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
