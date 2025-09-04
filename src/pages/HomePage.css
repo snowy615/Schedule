@@ -323,3 +323,107 @@
   border-left-width: 4px;
   transition: all 0.2s;
 }
+
+/* Drag and Drop Styles */
+.task-indicator {
+  cursor: move;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.task-indicator:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.task-indicator.dragging {
+  transform: rotate(5deg);
+  z-index: 1000;
+  cursor: grabbing;
+}
+
+.task-item.dragging {
+  transform: rotate(2deg);
+  z-index: 1000;
+  cursor: grabbing;
+}
+
+.calendar-day {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.calendar-day.drag-over {
+  background: rgba(100, 108, 255, 0.2) !important;
+  border: 2px dashed #646cff !important;
+  transform: scale(1.02);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(100, 108, 255, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(100, 108, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(100, 108, 255, 0); }
+}
+
+.calendar-day.drag-over::after {
+  content: '📅 Drop here';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(100, 108, 255, 0.9);
+  color: white;
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Prevent text selection during drag */
+.calendar-day.drag-over * {
+  pointer-events: none;
+}
+
+/* Drag preview customization */
+.task-indicator[draggable="true"] {
+  -webkit-user-drag: element;
+}
+
+.task-item[draggable="true"] {
+  -webkit-user-drag: element;
+  cursor: move;
+}
+
+/* Mobile touch improvements */
+@media (max-width: 768px) {
+  .task-indicator {
+    touch-action: none;
+    padding: 0.4rem 0.6rem; /* Larger touch target */
+  }
+  
+  .task-item {
+    touch-action: none;
+    padding: 1.2rem; /* Larger touch target */
+  }
+  
+  .calendar-day.drag-over::after {
+    font-size: 0.9rem;
+    padding: 0.7rem;
+  }
+  
+  /* Disable drag on very small screens to prevent accidental drags */
+  @media (max-width: 480px) {
+    .task-indicator[draggable="true"] {
+      -webkit-user-drag: none;
+      draggable: false;
+    }
+    
+    .task-item[draggable="true"] {
+      -webkit-user-drag: none;
+      draggable: false;
+    }
+  }
+}
