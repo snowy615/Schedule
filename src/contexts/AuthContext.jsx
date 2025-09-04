@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import apiService from '../services/apiService'
 
 const AuthContext = createContext()
 
@@ -16,38 +17,30 @@ export function AuthProvider({ children }) {
 
   // Check for existing user session on mount
   useEffect(() => {
-    // Create demo user if no users exist
-    const users = JSON.parse(localStorage.getItem('schedule-users') || '[]')
-    if (users.length === 0) {
-      const demoUser = {
-        id: 'demo-user',
-        email: 'demo@example.com',
-        password: 'demo123',
-        name: 'Demo User',
-        createdAt: new Date().toISOString()
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem('auth-token')
+        if (token) {
+          apiService.setToken(token)
+          const userData = await apiService.getCurrentUser()
+          setUser(userData.user)
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error)
+        // Clear invalid token
+        apiService.logout()
+      } finally {
+        setLoading(false)
       }
-      localStorage.setItem('schedule-users', JSON.stringify([demoUser]))
     }
     
-    const savedUser = localStorage.getItem('schedule-user')
-    if (savedUser) {
-      setUser(JSON.parse(savedUser))
-    }
-    setLoading(false)
+    checkAuth()
   }, [])
 
   const login = async (email, password) => {
     try {
-      // Simulate API call - in a real app, this would call your backend
-      const users = JSON.parse(localStorage.getItem('schedule-users') || '[]')
-      const user = users.find(u => u.email === email && u.password === password)
-      
-      if (!user) {
-        throw new Error('Invalid email or password')
-      }
-
-      setUser(user)
-      localStorage.setItem('schedule-user', JSON.stringify(user))
+      const data = await apiService.login(email, password)
+      setUser(data.user)
       return { success: true }
     } catch (error) {
       return { success: false, error: error.message }
@@ -56,27 +49,8 @@ export function AuthProvider({ children }) {
 
   const signup = async (email, password, name) => {
     try {
-      // Simulate API call - in a real app, this would call your backend
-      const users = JSON.parse(localStorage.getItem('schedule-users') || '[]')
-      
-      // Check if user already exists
-      if (users.some(u => u.email === email)) {
-        throw new Error('User with this email already exists')
-      }
-
-      const newUser = {
-        id: Date.now().toString(),
-        email,
-        password, // In a real app, this would be hashed
-        name,
-        createdAt: new Date().toISOString()
-      }
-
-      users.push(newUser)
-      localStorage.setItem('schedule-users', JSON.stringify(users))
-      
-      setUser(newUser)
-      localStorage.setItem('schedule-user', JSON.stringify(newUser))
+      const data = await apiService.signup(email, password, name)
+      setUser(data.user)
       return { success: true }
     } catch (error) {
       return { success: false, error: error.message }
@@ -84,8 +58,8 @@ export function AuthProvider({ children }) {
   }
 
   const logout = () => {
+    apiService.logout()
     setUser(null)
-    localStorage.removeItem('schedule-user')
   }
 
   const value = {

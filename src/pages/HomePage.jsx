@@ -9,7 +9,7 @@ function HomePage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [showTaskModal, setShowTaskModal] = useState(false)
-  const { tasks, addTask, toggleTask, deleteTask } = useTasks()
+  const { tasks, loading, addTask, toggleTask, deleteTask } = useTasks()
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
@@ -27,13 +27,17 @@ function HomePage() {
     return tasks.filter(task => isSameDay(new Date(task.date), date))
   }
 
-  const handleAddTask = (taskData) => {
-    addTask({
-      ...taskData,
-      date: selectedDate.toISOString().split('T')[0],
-      id: Date.now().toString()
-    })
-    setShowTaskModal(false)
+  const handleAddTask = async (taskData) => {
+    try {
+      await addTask({
+        ...taskData,
+        date: selectedDate.toISOString().split('T')[0]
+      })
+      setShowTaskModal(false)
+    } catch (error) {
+      console.error('Failed to add task:', error)
+      // Could add error handling UI here
+    }
   }
 
   return (
@@ -100,32 +104,39 @@ function HomePage() {
 
       <div className="selected-date-tasks">
         <h3>{format(selectedDate, 'EEEE, MMMM d, yyyy')}</h3>
-        <div className="tasks-list">
-          {getTasksForDate(selectedDate).length === 0 ? (
-            <p className="no-tasks">No tasks for this day</p>
-          ) : (
-            getTasksForDate(selectedDate).map(task => (
-              <div key={task.id} className={`task-item ${task.completed ? 'completed' : ''}`}>
-                <input
-                  type="checkbox"
-                  checked={task.completed}
-                  onChange={() => toggleTask(task.id)}
-                />
-                <div className="task-content">
-                  <h4>{task.title}</h4>
-                  {task.description && <p>{task.description}</p>}
-                  {task.time && <span className="task-time">{task.time}</span>}
+        {loading ? (
+          <div className="loading-container">
+            <div className="loading-spinner"></div>
+            <p>Loading tasks...</p>
+          </div>
+        ) : (
+          <div className="tasks-list">
+            {getTasksForDate(selectedDate).length === 0 ? (
+              <p className="no-tasks">No tasks for this day</p>
+            ) : (
+              getTasksForDate(selectedDate).map(task => (
+                <div key={task.id} className={`task-item ${task.completed ? 'completed' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={task.completed}
+                    onChange={() => toggleTask(task.id)}
+                  />
+                  <div className="task-content">
+                    <h4>{task.title}</h4>
+                    {task.description && <p>{task.description}</p>}
+                    {task.time && <span className="task-time">{task.time}</span>}
+                  </div>
+                  <button 
+                    onClick={() => deleteTask(task.id)}
+                    className="delete-button"
+                  >
+                    ×
+                  </button>
                 </div>
-                <button 
-                  onClick={() => deleteTask(task.id)}
-                  className="delete-button"
-                >
-                  ×
-                </button>
-              </div>
-            ))
-          )}
-        </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {showTaskModal && (

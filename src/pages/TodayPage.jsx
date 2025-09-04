@@ -7,7 +7,7 @@ import './TodayPage.css'
 
 function TodayPage() {
   const [showTaskModal, setShowTaskModal] = useState(false)
-  const { tasks, addTask, toggleTask, deleteTask } = useTasks()
+  const { tasks, loading, addTask, toggleTask, deleteTask } = useTasks()
   const today = new Date()
 
   const todayTasks = tasks
@@ -19,13 +19,17 @@ function TodayPage() {
       return a.time.localeCompare(b.time)
     })
 
-  const handleAddTask = (taskData) => {
-    addTask({
-      ...taskData,
-      date: today.toISOString().split('T')[0],
-      id: Date.now().toString()
-    })
-    setShowTaskModal(false)
+  const handleAddTask = async (taskData) => {
+    try {
+      await addTask({
+        ...taskData,
+        date: today.toISOString().split('T')[0]
+      })
+      setShowTaskModal(false)
+    } catch (error) {
+      console.error('Failed to add task:', error)
+      // Could add error handling UI here
+    }
   }
 
   const completedTasks = todayTasks.filter(task => task.completed)

@@ -1,73 +1,97 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import apiService from '../services/apiService'
 
 export function useTasks() {
   const [tasks, setTasks] = useState([])
+  const [loading, setLoading] = useState(false)
   const { user } = useAuth()
 
-  // Get the storage key for the current user
-  const getStorageKey = () => {
-    return user ? `schedule-tasks-${user.id}` : 'schedule-tasks-guest'
-  }
-
-  // Load tasks from localStorage on mount or when user changes
+  // Load tasks from API when user changes
   useEffect(() => {
     if (!user) {
       setTasks([])
       return
     }
     
-    const storageKey = getStorageKey()
-    const savedTasks = localStorage.getItem(storageKey)
-    if (savedTasks) {
-      setTasks(JSON.parse(savedTasks))
-    } else {
-      setTasks([])
+    const loadTasks = async () => {
+      try {
+        setLoading(true)
+        const tasksData = await apiService.getTasks()
+        setTasks(tasksData)
+      } catch (error) {
+        console.error('Failed to load tasks:', error)
+        setTasks([])
+      } finally {
+        setLoading(false)
+      }
     }
+    
+    loadTasks()
   }, [user])
 
-  // Save tasks to localStorage whenever tasks change
-  useEffect(() => {
-    if (user) {
-      const storageKey = getStorageKey()
-      localStorage.setItem(storageKey, JSON.stringify(tasks))
+  const addTask = async (newTask) => {
+    if (!user) return
+    
+    try {
+      const task = await apiService.createTask(newTask)
+      setTasks(prev => [...prev, task])
+      return task
+    } catch (error) {
+      console.error('Failed to add task:', error)
+      throw error
     }
-  }, [tasks, user])
-
-  const addTask = (newTask) => {
-    if (!user) return
-    setTasks(prev => [...prev, newTask])
   }
 
-  const toggleTask = (taskId) => {
+  const toggleTask = async (taskId) => {
     if (!user) return
-    setTasks(prev => 
-      prev.map(task => 
-        task.id === taskId 
-          ? { ...task, completed: !task.completed }
-          : task
+    
+    try {
+      const updatedTask = await apiService.toggleTask(taskId)
+      setTasks(prev => 
+        prev.map(task => 
+          task.id === taskId ? updatedTask : task
+        )
       )
-    )
+      return updatedTask
+    } catch (error) {
+      console.error('Failed to toggle task:', error)
+      throw error
+    }
   }
 
-  const deleteTask = (taskId) => {
+  const deleteTask = async (taskId) => {
     if (!user) return
-    setTasks(prev => prev.filter(task => task.id !== taskId))
+    
+    try {
+      await apiService.deleteTask(taskId)
+      setTasks(prev => prev.filter(task => task.id !== taskId))
+    } catch (error) {
+      console.error('Failed to delete task:', error)
+      throw error
+    }
   }
 
-  const updateTask = (taskId, updates) => {
+  const updateTask = async (taskId, updates) => {
     if (!user) return
-    setTasks(prev => 
-      prev.map(task => 
-        task.id === taskId 
-          ? { ...task, ...updates }
-          : task
+    
+    try {
+      const updatedTask = await apiService.updateTask(taskId, updates)
+      setTasks(prev => 
+        prev.map(task => 
+          task.id === taskId ? updatedTask : task
+        )
       )
-    )
+      return updatedTask
+    } catch (error) {
+      console.error('Failed to update task:', error)
+      throw error
+    }
   }
 
   return {
     tasks,
+    loading,
     addTask,
     toggleTask,
     deleteTask,
