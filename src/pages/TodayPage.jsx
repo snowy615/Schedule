@@ -3,6 +3,7 @@ import { format, isToday } from 'date-fns'
 import { Plus, Clock } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import TaskModal from '../components/TaskModal'
+import { formatDateForAPI } from '../utils/dateUtils'
 import './TodayPage.css'
 
 function TodayPage() {
@@ -23,7 +24,7 @@ function TodayPage() {
     try {
       await addTask({
         ...taskData,
-        date: today.toISOString().split('T')[0]
+        date: formatDateForAPI(today)
       })
       setShowTaskModal(false)
     } catch (error) {

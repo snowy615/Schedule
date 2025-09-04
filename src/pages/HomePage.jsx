@@ -3,6 +3,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import TaskModal from '../components/TaskModal'
+import { formatDateForAPI } from '../utils/dateUtils'
 import './HomePage.css'
 
 function HomePage() {
@@ -31,7 +32,7 @@ function HomePage() {
     try {
       await addTask({
         ...taskData,
-        date: selectedDate.toISOString().split('T')[0]
+        date: formatDateForAPI(selectedDate)
       })
       setShowTaskModal(false)
     } catch (error) {
