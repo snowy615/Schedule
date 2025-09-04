@@ -51,7 +51,8 @@ class Database {
             title TEXT NOT NULL,
             description TEXT,
             date TEXT NOT NULL,
-            time TEXT,
+            start_time TEXT,
+            finish_time TEXT,
             completed BOOLEAN DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -63,8 +64,64 @@ class Database {
             reject(err);
             return;
           }
-          console.log('Database tables created successfully');
-          resolve();
+          
+          // Migrate existing data from 'time' column to 'start_time'
+          this.migrateTimeColumn().then(() => {
+            console.log('Database tables created successfully');
+            resolve();
+          }).catch(reject);
+        });
+      });
+    });
+  }
+
+  // Migrate existing 'time' column data to 'start_time' and 'finish_time'
+  async migrateTimeColumn() {
+    return new Promise((resolve, reject) => {
+      // Check if 'time' column exists
+      this.db.get("PRAGMA table_info(tasks)", (err, result) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        // Check if migration is needed
+        this.db.all("PRAGMA table_info(tasks)", (err, columns) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          
+          const hasTimeColumn = columns.some(col => col.name === 'time');
+          const hasStartTimeColumn = columns.some(col => col.name === 'start_time');
+          
+          if (hasTimeColumn && !hasStartTimeColumn) {
+            // Need to migrate
+            this.db.serialize(() => {
+              // Add new columns
+              this.db.run("ALTER TABLE tasks ADD COLUMN start_time TEXT", (err) => {
+                if (err && !err.message.includes('duplicate column name')) {
+                  console.error('Error adding start_time column:', err);
+                }
+              });
+              
+              this.db.run("ALTER TABLE tasks ADD COLUMN finish_time TEXT", (err) => {
+                if (err && !err.message.includes('duplicate column name')) {
+                  console.error('Error adding finish_time column:', err);
+                }
+              });
+              
+              // Copy data from time to start_time
+              this.db.run("UPDATE tasks SET start_time = time WHERE time IS NOT NULL", (err) => {
+                if (err) {
+                  console.error('Error migrating time data:', err);
+                }
+                resolve();
+              });
+            });
+          } else {
+            resolve();
+          }
         });
       });
     });

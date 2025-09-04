@@ -125,7 +125,16 @@ function HomePage() {
                   <div className="task-content">
                     <h4>{task.title}</h4>
                     {task.description && <p>{task.description}</p>}
-                    {task.time && <span className="task-time">{task.time}</span>}
+                    {(task.start_time || task.finish_time) && (
+                      <span className="task-time">
+                        {task.start_time && task.finish_time 
+                          ? `${task.start_time} - ${task.finish_time}`
+                          : task.start_time 
+                            ? `Start: ${task.start_time}`
+                            : `End: ${task.finish_time}`
+                        }
+                      </span>
+                    )}
                   </div>
                   <button 
                     onClick={() => deleteTask(task.id)}

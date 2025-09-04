@@ -4,14 +4,14 @@ class Task {
   // Create a new task
   static async create(userId, taskData) {
     return new Promise((resolve, reject) => {
-      const { title, description, date, time } = taskData;
+      const { title, description, date, start_time, finish_time } = taskData;
       const db = database.getDB();
       const stmt = db.prepare(`
-        INSERT INTO tasks (user_id, title, description, date, time) 
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO tasks (user_id, title, description, date, start_time, finish_time) 
+        VALUES (?, ?, ?, ?, ?, ?)
       `);
       
-      stmt.run([userId, title, description || null, date, time || null], function(err) {
+      stmt.run([userId, title, description || null, date, start_time || null, finish_time || null], function(err) {
         if (err) {
           reject(err);
         } else {
@@ -47,7 +47,7 @@ class Task {
       db.all(`
         SELECT * FROM tasks 
         WHERE user_id = ? 
-        ORDER BY date ASC, time ASC, created_at ASC
+        ORDER BY date ASC, start_time ASC, created_at ASC
       `, [userId], (err, rows) => {
         if (err) {
           reject(err);

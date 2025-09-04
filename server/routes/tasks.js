@@ -33,7 +33,7 @@ router.get('/date/:date', async (req, res) => {
 // Create a new task
 router.post('/', async (req, res) => {
   try {
-    const { title, description, date, time } = req.body;
+    const { title, description, date, start_time, finish_time } = req.body;
 
     // Validate required fields
     if (!title || !date) {
@@ -46,19 +46,26 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Date must be in YYYY-MM-DD format' });
     }
 
-    // Validate time format if provided (HH:MM)
-    if (time) {
-      const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-      if (!timeRegex.test(time)) {
-        return res.status(400).json({ error: 'Time must be in HH:MM format' });
-      }
+    // Validate time formats if provided (HH:MM)
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (start_time && !timeRegex.test(start_time)) {
+      return res.status(400).json({ error: 'Start time must be in HH:MM format' });
+    }
+    if (finish_time && !timeRegex.test(finish_time)) {
+      return res.status(400).json({ error: 'Finish time must be in HH:MM format' });
+    }
+
+    // Validate that finish_time is after start_time if both are provided
+    if (start_time && finish_time && start_time >= finish_time) {
+      return res.status(400).json({ error: 'Finish time must be after start time' });
     }
 
     const task = await Task.create(req.user.id, {
       title,
       description,
       date,
-      time
+      start_time,
+      finish_time
     });
 
     res.status(201).json({
@@ -95,7 +102,7 @@ router.get('/:id', async (req, res) => {
 // Update a task
 router.put('/:id', async (req, res) => {
   try {
-    const { title, description, date, time, completed } = req.body;
+    const { title, description, date, start_time, finish_time, completed } = req.body;
     const updates = {};
 
     // Only include provided fields in updates
@@ -109,14 +116,28 @@ router.put('/:id', async (req, res) => {
       }
       updates.date = date;
     }
-    if (time !== undefined) {
-      // Validate time format if provided
-      if (time && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time)) {
-        return res.status(400).json({ error: 'Time must be in HH:MM format' });
+    if (start_time !== undefined) {
+      // Validate start_time format if provided
+      if (start_time && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(start_time)) {
+        return res.status(400).json({ error: 'Start time must be in HH:MM format' });
       }
-      updates.time = time;
+      updates.start_time = start_time;
+    }
+    if (finish_time !== undefined) {
+      // Validate finish_time format if provided
+      if (finish_time && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(finish_time)) {
+        return res.status(400).json({ error: 'Finish time must be in HH:MM format' });
+      }
+      updates.finish_time = finish_time;
     }
     if (completed !== undefined) updates.completed = completed ? 1 : 0;
+
+    // Validate time relationship if both times are being updated
+    const currentStartTime = start_time !== undefined ? start_time : null;
+    const currentFinishTime = finish_time !== undefined ? finish_time : null;
+    if (currentStartTime && currentFinishTime && currentStartTime >= currentFinishTime) {
+      return res.status(400).json({ error: 'Finish time must be after start time' });
+    }
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: 'No valid fields to update' });

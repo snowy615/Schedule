@@ -7,7 +7,8 @@ function TaskModal({ onClose, onSave, selectedDate }) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    time: ''
+    start_time: '',
+    finish_time: ''
   })
 
   const handleSubmit = (e) => {
@@ -15,7 +16,7 @@ function TaskModal({ onClose, onSave, selectedDate }) {
     if (!formData.title.trim()) return
     
     onSave(formData)
-    setFormData({ title: '', description: '', time: '' })
+    setFormData({ title: '', description: '', start_time: '', finish_time: '' })
   }
 
   const handleChange = (field, value) => {
@@ -62,12 +63,22 @@ function TaskModal({ onClose, onSave, selectedDate }) {
           </div>
 
           <div className="form-group">
-            <label htmlFor="time">Time</label>
+            <label htmlFor="start_time">Start Time</label>
             <input
-              id="time"
+              id="start_time"
               type="time"
-              value={formData.time}
-              onChange={(e) => handleChange('time', e.target.value)}
+              value={formData.start_time}
+              onChange={(e) => handleChange('start_time', e.target.value)}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="finish_time">Finish Time</label>
+            <input
+              id="finish_time"
+              type="time"
+              value={formData.finish_time}
+              onChange={(e) => handleChange('finish_time', e.target.value)}
             />
           </div>
 

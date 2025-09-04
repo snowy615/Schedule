@@ -1,9 +1,11 @@
 // Utility function to format date as YYYY-MM-DD 
-// For date-fns created dates, use toISOString to preserve the intended date
+// Always use local timezone components to avoid date shifting
 export function formatDateForAPI(date) {
-  // If this is a date-fns created date (at midnight UTC), use toISOString
-  // to preserve the intended date, otherwise it gets shifted by timezone
-  return date.toISOString().split('T')[0]
+  // Use local timezone components to ensure the date doesn't shift
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 // Utility function to get today's date in YYYY-MM-DD format (local timezone)

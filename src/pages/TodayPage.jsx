@@ -14,10 +14,19 @@ function TodayPage() {
   const todayTasks = tasks
     .filter(task => isToday(new Date(task.date)))
     .sort((a, b) => {
-      if (!a.time && !b.time) return 0
-      if (!a.time) return 1
-      if (!b.time) return -1
-      return a.time.localeCompare(b.time)
+      // Sort by start_time first, then by finish_time, then by creation time
+      if (!a.start_time && !b.start_time) return 0
+      if (!a.start_time) return 1
+      if (!b.start_time) return -1
+      
+      const startTimeComparison = a.start_time.localeCompare(b.start_time)
+      if (startTimeComparison !== 0) return startTimeComparison
+      
+      // If start times are equal, sort by finish time
+      if (!a.finish_time && !b.finish_time) return 0
+      if (!a.finish_time) return 1
+      if (!b.finish_time) return -1
+      return a.finish_time.localeCompare(b.finish_time)
     })
 
   const handleAddTask = async (taskData) => {
@@ -36,13 +45,24 @@ function TodayPage() {
   const completedTasks = todayTasks.filter(task => task.completed)
   const pendingTasks = todayTasks.filter(task => !task.completed)
 
-  const getTimeSlot = (time) => {
-    if (!time) return 'No time set'
-    const [hours, minutes] = time.split(':')
-    const hour = parseInt(hours)
-    const ampm = hour >= 12 ? 'PM' : 'AM'
-    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
-    return `${displayHour}:${minutes} ${ampm}`
+  const getTimeSlot = (start_time, finish_time) => {
+    if (!start_time && !finish_time) return 'No time set'
+    
+    const formatTime = (time) => {
+      const [hours, minutes] = time.split(':')
+      const hour = parseInt(hours)
+      const ampm = hour >= 12 ? 'PM' : 'AM'
+      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+      return `${displayHour}:${minutes} ${ampm}`
+    }
+    
+    if (start_time && finish_time) {
+      return `${formatTime(start_time)} - ${formatTime(finish_time)}`
+    } else if (start_time) {
+      return `Start: ${formatTime(start_time)}`
+    } else {
+      return `End: ${formatTime(finish_time)}`
+    }
   }
 
   return (
@@ -157,7 +177,7 @@ function TodayPage() {
                         )}
                         <div className="task-time">
                           <Clock size={16} />
-                          <span>{getTimeSlot(task.time)}</span>
+                          <span>{getTimeSlot(task.start_time, task.finish_time)}</span>
                         </div>
                       </div>
                     </div>
