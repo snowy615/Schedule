@@ -1,9 +1,15 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Calendar, Clock } from 'lucide-react'
+import { Calendar, Clock, User, LogOut } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
 import './Navigation.css'
 
 function Navigation() {
   const location = useLocation()
+  const { user, logout } = useAuth()
+
+  const handleLogout = () => {
+    logout()
+  }
 
   return (
     <nav className="navigation">
@@ -25,6 +31,16 @@ function Navigation() {
           <Clock size={20} />
           <span>Today</span>
         </Link>
+      </div>
+      <div className="nav-user">
+        <div className="user-info">
+          <User size={18} />
+          <span>{user?.name || user?.email}</span>
+        </div>
+        <button onClick={handleLogout} className="logout-button">
+          <LogOut size={18} />
+          <span>Logout</span>
+        </button>
       </div>
     </nav>
   )
