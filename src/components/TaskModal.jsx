@@ -8,15 +8,24 @@ function TaskModal({ onClose, onSave, selectedDate }) {
     title: '',
     description: '',
     start_time: '',
-    finish_time: ''
+    finish_time: '',
+    priority: 3
   })
+
+  const priorityOptions = [
+    { value: 1, label: 'P1 - Urgent', color: '#dc2626' },
+    { value: 2, label: 'P2 - High', color: '#ea580c' },
+    { value: 3, label: 'P3 - Medium', color: '#2563eb' },
+    { value: 4, label: 'P4 - Low', color: '#16a34a' },
+    { value: 5, label: 'P5 - Very Low', color: '#6b7280' }
+  ]
 
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!formData.title.trim()) return
     
     onSave(formData)
-    setFormData({ title: '', description: '', start_time: '', finish_time: '' })
+    setFormData({ title: '', description: '', start_time: '', finish_time: '', priority: 3 })
   }
 
   const handleChange = (field, value) => {
@@ -80,6 +89,22 @@ function TaskModal({ onClose, onSave, selectedDate }) {
               value={formData.finish_time}
               onChange={(e) => handleChange('finish_time', e.target.value)}
             />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="priority">Priority</label>
+            <select
+              id="priority"
+              value={formData.priority}
+              onChange={(e) => handleChange('priority', parseInt(e.target.value))}
+              className="priority-select"
+            >
+              {priorityOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="form-actions">

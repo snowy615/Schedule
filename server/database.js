@@ -53,6 +53,7 @@ class Database {
             date TEXT NOT NULL,
             start_time TEXT,
             finish_time TEXT,
+            priority INTEGER DEFAULT 3,
             completed BOOLEAN DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -67,6 +68,9 @@ class Database {
           
           // Migrate existing data from 'time' column to 'start_time'
           this.migrateTimeColumn().then(() => {
+            // Add priority column to existing tables if needed
+            return this.addPriorityColumn();
+          }).then(() => {
             console.log('Database tables created successfully');
             resolve();
           }).catch(reject);
@@ -123,6 +127,36 @@ class Database {
             resolve();
           }
         });
+      });
+    });
+  }
+
+  // Add priority column to existing tasks table if needed
+  async addPriorityColumn() {
+    return new Promise((resolve, reject) => {
+      // Check if priority column exists
+      this.db.all("PRAGMA table_info(tasks)", (err, columns) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        const hasPriorityColumn = columns.some(col => col.name === 'priority');
+        
+        if (!hasPriorityColumn) {
+          // Add priority column with default value 3 (medium priority)
+          this.db.run("ALTER TABLE tasks ADD COLUMN priority INTEGER DEFAULT 3", (err) => {
+            if (err && !err.message.includes('duplicate column name')) {
+              console.error('Error adding priority column:', err);
+              reject(err);
+            } else {
+              console.log('Priority column added successfully');
+              resolve();
+            }
+          });
+        } else {
+          resolve();
+        }
       });
     });
   }

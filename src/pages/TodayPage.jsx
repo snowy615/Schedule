@@ -4,6 +4,7 @@ import { Plus, Clock } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import TaskModal from '../components/TaskModal'
 import { getTodayDateString, getTomorrowDateString } from '../utils/dateUtils'
+import { getPriorityStyles } from '../utils/priorityUtils'
 import './TodayPage.css'
 
 function TodayPage() {
@@ -115,74 +116,98 @@ function TodayPage() {
           </div>
         ) : (
           <div className="timeline">
-            {pendingTasks.map(task => (
-              <div key={task.id} className="timeline-item pending">
-                <div className="timeline-marker"></div>
-                <div className="timeline-content">
-                  <div className="task-card">
-                    <div className="task-header">
-                      <input
-                        type="checkbox"
-                        checked={task.completed}
-                        onChange={() => toggleTask(task.id)}
-                        className="task-checkbox"
-                      />
-                      <h3 className="task-title">{task.title}</h3>
-                      <button 
-                        onClick={() => deleteTask(task.id)}
-                        className="delete-button"
-                      >
-                        ×
-                      </button>
-                    </div>
-                    {task.description && (
-                      <p className="task-description">{task.description}</p>
-                    )}
-                    <div className="task-time">
-                      <Clock size={16} />
-                      <span>{getTimeSlot(task.time)}</span>
+            {pendingTasks.map(task => {
+              const priorityStyles = getPriorityStyles(task.priority || 3)
+              return (
+                <div key={task.id} className="timeline-item pending"
+                     style={{
+                       borderLeft: `4px solid ${priorityStyles.color}`,
+                       backgroundColor: priorityStyles.backgroundColor
+                     }}>
+                  <div className="timeline-marker" style={{ backgroundColor: priorityStyles.color }}></div>
+                  <div className="timeline-content">
+                    <div className="task-card">
+                      <div className="task-header">
+                        <input
+                          type="checkbox"
+                          checked={task.completed}
+                          onChange={() => toggleTask(task.id)}
+                          className="task-checkbox"
+                        />
+                        <div className="task-title-section">
+                          <h3 className="task-title">{task.title}</h3>
+                          <span className="priority-badge" style={{ color: priorityStyles.color }}>
+                            P{task.priority || 3}
+                          </span>
+                        </div>
+                        <button 
+                          onClick={() => deleteTask(task.id)}
+                          className="delete-button"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      {task.description && (
+                        <p className="task-description">{task.description}</p>
+                      )}
+                      <div className="task-time">
+                        <Clock size={16} />
+                        <span>{getTimeSlot(task.start_time, task.finish_time)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
             
             {completedTasks.length > 0 && (
               <>
                 <div className="timeline-separator">
                   <span>Completed Tasks</span>
                 </div>
-                {completedTasks.map(task => (
-                  <div key={task.id} className="timeline-item completed">
-                    <div className="timeline-marker"></div>
-                    <div className="timeline-content">
-                      <div className="task-card">
-                        <div className="task-header">
-                          <input
-                            type="checkbox"
-                            checked={task.completed}
-                            onChange={() => toggleTask(task.id)}
-                            className="task-checkbox"
-                          />
-                          <h3 className="task-title">{task.title}</h3>
-                          <button 
-                            onClick={() => deleteTask(task.id)}
-                            className="delete-button"
-                          >
-                            ×
-                          </button>
-                        </div>
-                        {task.description && (
-                          <p className="task-description">{task.description}</p>
-                        )}
-                        <div className="task-time">
-                          <Clock size={16} />
-                          <span>{getTimeSlot(task.start_time, task.finish_time)}</span>
+                {completedTasks.map(task => {
+                  const priorityStyles = getPriorityStyles(task.priority || 3)
+                  return (
+                    <div key={task.id} className="timeline-item completed"
+                         style={{
+                           borderLeft: `4px solid ${priorityStyles.color}`,
+                           backgroundColor: priorityStyles.backgroundColor
+                         }}>
+                      <div className="timeline-marker" style={{ backgroundColor: priorityStyles.color }}></div>
+                      <div className="timeline-content">
+                        <div className="task-card">
+                          <div className="task-header">
+                            <input
+                              type="checkbox"
+                              checked={task.completed}
+                              onChange={() => toggleTask(task.id)}
+                              className="task-checkbox"
+                            />
+                            <div className="task-title-section">
+                              <h3 className="task-title">{task.title}</h3>
+                              <span className="priority-badge" style={{ color: priorityStyles.color }}>
+                                P{task.priority || 3}
+                              </span>
+                            </div>
+                            <button 
+                              onClick={() => deleteTask(task.id)}
+                              className="delete-button"
+                            >
+                              ×
+                            </button>
+                          </div>
+                          {task.description && (
+                            <p className="task-description">{task.description}</p>
+                          )}
+                          <div className="task-time">
+                            <Clock size={16} />
+                            <span>{getTimeSlot(task.start_time, task.finish_time)}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </>
             )}
           </div>

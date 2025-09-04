@@ -297,3 +297,31 @@
     padding: 1rem;
   }
 }
+
+/* Priority Styles */
+.task-title-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.priority-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.4rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid currentColor;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+.timeline-item {
+  border-left-width: 4px;
+  transition: all 0.2s;
+}
+
+.timeline-marker {
+  transition: all 0.2s;
+}

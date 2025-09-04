@@ -4,6 +4,7 @@ import { Plus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import TaskModal from '../components/TaskModal'
 import { formatDateForAPI, formatDateForAPIWithDelay } from '../utils/dateUtils'
+import { getPriorityStyles } from '../utils/priorityUtils'
 import './HomePage.css'
 
 function HomePage() {
@@ -83,16 +84,23 @@ function HomePage() {
               >
                 <span className="day-number">{format(day, 'd')}</span>
                 <div className="day-tasks">
-                  {dayTasks.slice(0, 3).map(task => (
-                    <div
-                      key={task.id}
-                      className={`task-indicator ${task.completed ? 'completed' : ''}`}
-                      title={task.title}
-                    >
-                      {task.title.substring(0, 20)}
-                      {task.title.length > 20 ? '...' : ''}
-                    </div>
-                  ))}
+                  {dayTasks.slice(0, 3).map(task => {
+                    const priorityStyles = getPriorityStyles(task.priority || 3)
+                    return (
+                      <div
+                        key={task.id}
+                        className={`task-indicator ${task.completed ? 'completed' : ''}`}
+                        style={{
+                          borderLeft: `3px solid ${priorityStyles.color}`,
+                          backgroundColor: priorityStyles.backgroundColor
+                        }}
+                        title={`${task.title} (${task.priority ? `P${task.priority}` : 'P3'})`}
+                      >
+                        {task.title.substring(0, 20)}
+                        {task.title.length > 20 ? '...' : ''}
+                      </div>
+                    )
+                  })}
                   {dayTasks.length > 3 && (
                     <div className="more-tasks">+{dayTasks.length - 3} more</div>
                   )}
@@ -115,35 +123,47 @@ function HomePage() {
             {getTasksForDate(selectedDate).length === 0 ? (
               <p className="no-tasks">No tasks for this day</p>
             ) : (
-              getTasksForDate(selectedDate).map(task => (
-                <div key={task.id} className={`task-item ${task.completed ? 'completed' : ''}`}>
-                  <input
-                    type="checkbox"
-                    checked={task.completed}
-                    onChange={() => toggleTask(task.id)}
-                  />
-                  <div className="task-content">
-                    <h4>{task.title}</h4>
-                    {task.description && <p>{task.description}</p>}
-                    {(task.start_time || task.finish_time) && (
-                      <span className="task-time">
-                        {task.start_time && task.finish_time 
-                          ? `${task.start_time} - ${task.finish_time}`
-                          : task.start_time 
-                            ? `Start: ${task.start_time}`
-                            : `End: ${task.finish_time}`
-                        }
-                      </span>
-                    )}
+              getTasksForDate(selectedDate).map(task => {
+                const priorityStyles = getPriorityStyles(task.priority || 3)
+                return (
+                  <div key={task.id} className={`task-item ${task.completed ? 'completed' : ''}`}
+                       style={{
+                         borderLeft: `4px solid ${priorityStyles.color}`,
+                         backgroundColor: priorityStyles.backgroundColor
+                       }}>
+                    <input
+                      type="checkbox"
+                      checked={task.completed}
+                      onChange={() => toggleTask(task.id)}
+                    />
+                    <div className="task-content">
+                      <div className="task-header-info">
+                        <h4>{task.title}</h4>
+                        <span className="priority-badge" style={{ color: priorityStyles.color }}>
+                          P{task.priority || 3}
+                        </span>
+                      </div>
+                      {task.description && <p>{task.description}</p>}
+                      {(task.start_time || task.finish_time) && (
+                        <span className="task-time">
+                          {task.start_time && task.finish_time 
+                            ? `${task.start_time} - ${task.finish_time}`
+                            : task.start_time 
+                              ? `Start: ${task.start_time}`
+                              : `End: ${task.finish_time}`
+                          }
+                        </span>
+                      )}
+                    </div>
+                    <button 
+                      onClick={() => deleteTask(task.id)}
+                      className="delete-button"
+                    >
+                      ×
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => deleteTask(task.id)}
-                    className="delete-button"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         )}

@@ -4,14 +4,14 @@ class Task {
   // Create a new task
   static async create(userId, taskData) {
     return new Promise((resolve, reject) => {
-      const { title, description, date, start_time, finish_time } = taskData;
+      const { title, description, date, start_time, finish_time, priority } = taskData;
       const db = database.getDB();
       const stmt = db.prepare(`
-        INSERT INTO tasks (user_id, title, description, date, start_time, finish_time) 
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO tasks (user_id, title, description, date, start_time, finish_time, priority) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
-      stmt.run([userId, title, description || null, date, start_time || null, finish_time || null], function(err) {
+      stmt.run([userId, title, description || null, date, start_time || null, finish_time || null, priority || 3], function(err) {
         if (err) {
           reject(err);
         } else {
@@ -88,7 +88,7 @@ class Task {
   // Update a task
   static async update(id, userId, updates) {
     return new Promise((resolve, reject) => {
-      const allowedFields = ['title', 'description', 'date', 'time', 'completed'];
+      const allowedFields = ['title', 'description', 'date', 'start_time', 'finish_time', 'priority', 'completed'];
       const fields = [];
       const values = [];
 

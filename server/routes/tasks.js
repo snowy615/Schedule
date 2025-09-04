@@ -33,7 +33,7 @@ router.get('/date/:date', async (req, res) => {
 // Create a new task
 router.post('/', async (req, res) => {
   try {
-    const { title, description, date, start_time, finish_time } = req.body;
+    const { title, description, date, start_time, finish_time, priority } = req.body;
 
     // Validate required fields
     if (!title || !date) {
@@ -55,6 +55,11 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Finish time must be in HH:MM format' });
     }
 
+    // Validate priority if provided (1-5)
+    if (priority !== undefined && (priority < 1 || priority > 5 || !Number.isInteger(priority))) {
+      return res.status(400).json({ error: 'Priority must be an integer between 1 and 5' });
+    }
+
     // Validate that finish_time is after start_time if both are provided
     if (start_time && finish_time && start_time >= finish_time) {
       return res.status(400).json({ error: 'Finish time must be after start time' });
@@ -65,7 +70,8 @@ router.post('/', async (req, res) => {
       description,
       date,
       start_time,
-      finish_time
+      finish_time,
+      priority
     });
 
     res.status(201).json({
@@ -102,7 +108,7 @@ router.get('/:id', async (req, res) => {
 // Update a task
 router.put('/:id', async (req, res) => {
   try {
-    const { title, description, date, start_time, finish_time, completed } = req.body;
+    const { title, description, date, start_time, finish_time, priority, completed } = req.body;
     const updates = {};
 
     // Only include provided fields in updates
@@ -129,6 +135,13 @@ router.put('/:id', async (req, res) => {
         return res.status(400).json({ error: 'Finish time must be in HH:MM format' });
       }
       updates.finish_time = finish_time;
+    }
+    if (priority !== undefined) {
+      // Validate priority (1-5)
+      if (priority < 1 || priority > 5 || !Number.isInteger(priority)) {
+        return res.status(400).json({ error: 'Priority must be an integer between 1 and 5' });
+      }
+      updates.priority = priority;
     }
     if (completed !== undefined) updates.completed = completed ? 1 : 0;
 

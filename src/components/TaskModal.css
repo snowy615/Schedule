@@ -167,6 +167,33 @@
   cursor: not-allowed;
 }
 
+/* Priority Styles */
+.priority-select {
+  width: 100%;
+  padding: 0.75rem;
+  background: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.priority-select:focus {
+  outline: none;
+  border-color: #646cff;
+  box-shadow: 0 0 0 3px rgba(100, 108, 255, 0.1);
+}
+
+.priority-select option {
+  background: #2a2a2a;
+  color: #ffffff;
+  padding: 8px;
+}
+
 @media (max-width: 768px) {
   .modal-content {
     margin: 1rem;
