@@ -71,7 +71,7 @@ function HomePage() {
     try {
       await addTask({
         ...taskData,
-        date: formatDateForAPIWithDelay(selectedDate) // Add 24 hours to selected date
+        date: formatDateForAPI(selectedDate) // Use exact selected date
       })
       setShowTaskModal(false)
     } catch (error) {
@@ -84,7 +84,7 @@ function HomePage() {
     try {
       await addPlan({
         ...planData,
-        date: formatDateForAPIWithDelay(selectedDate) // Add 24 hours to selected date
+        date: formatDateForAPI(selectedDate) // Use exact selected date
       })
       setShowPlanModal(false)
     } catch (error) {
