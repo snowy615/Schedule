@@ -423,6 +423,253 @@ class Plan {
       });
     });
   }
+
+  // Add a task to an existing plan
+  static async addTask(planId, userId, taskData) {
+    return new Promise((resolve, reject) => {
+      const db = database.getDB();
+      
+      db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+        
+        // Verify plan exists and belongs to user
+        db.get('SELECT * FROM plans WHERE id = ? AND user_id = ?', [planId, userId], (err, plan) => {
+          if (err) {
+            db.run('ROLLBACK');
+            reject(err);
+            return;
+          }
+          
+          if (!plan) {
+            db.run('ROLLBACK');
+            reject(new Error('Plan not found or unauthorized'));
+            return;
+          }
+          
+          // Get the next plan_order
+          db.get('SELECT MAX(plan_order) as max_order FROM tasks WHERE plan_id = ?', [planId], (orderErr, orderResult) => {
+            if (orderErr) {
+              db.run('ROLLBACK');
+              reject(orderErr);
+              return;
+            }
+            
+            const nextOrder = (orderResult.max_order || -1) + 1;
+            
+            // Insert the new task
+            db.run(`
+              INSERT INTO tasks (user_id, title, description, date, plan_id, plan_order, priority) 
+              VALUES (?, ?, ?, ?, ?, ?, ?)
+            `, [userId, taskData.title, taskData.description, plan.date, planId, nextOrder, taskData.priority], function(taskErr) {
+              if (taskErr) {
+                db.run('ROLLBACK');
+                reject(taskErr);
+                return;
+              }
+              
+              db.run('COMMIT', (commitErr) => {
+                if (commitErr) {
+                  reject(commitErr);
+                } else {
+                  Plan.findById(planId).then(resolve).catch(reject);
+                }
+              });
+            });
+          });
+        });
+      });
+    });
+  }
+
+  // Update a task in a plan
+  static async updateTask(planId, taskId, userId, updates) {
+    return new Promise((resolve, reject) => {
+      const db = database.getDB();
+      
+      db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+        
+        // Verify plan exists and belongs to user
+        db.get('SELECT * FROM plans WHERE id = ? AND user_id = ?', [planId, userId], (err, plan) => {
+          if (err) {
+            db.run('ROLLBACK');
+            reject(err);
+            return;
+          }
+          
+          if (!plan) {
+            db.run('ROLLBACK');
+            reject(new Error('Plan not found or unauthorized'));
+            return;
+          }
+          
+          // Verify task belongs to the plan
+          db.get('SELECT * FROM tasks WHERE id = ? AND plan_id = ? AND user_id = ?', [taskId, planId, userId], (taskErr, task) => {
+            if (taskErr) {
+              db.run('ROLLBACK');
+              reject(taskErr);
+              return;
+            }
+            
+            if (!task) {
+              db.run('ROLLBACK');
+              reject(new Error('Task not found or does not belong to plan'));
+              return;
+            }
+            
+            // Build dynamic update query
+            const allowedFields = ['title', 'description', 'priority', 'date'];
+            const fields = [];
+            const values = [];
+            
+            for (const [key, value] of Object.entries(updates)) {
+              if (allowedFields.includes(key)) {
+                fields.push(`${key} = ?`);
+                values.push(value);
+              }
+            }
+            
+            if (fields.length === 0) {
+              db.run('ROLLBACK');
+              reject(new Error('No valid fields to update'));
+              return;
+            }
+            
+            // Add updated_at timestamp
+            fields.push('updated_at = CURRENT_TIMESTAMP');
+            values.push(taskId);
+            
+            const query = `UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`;
+            
+            db.run(query, values, function(updateErr) {
+              if (updateErr) {
+                db.run('ROLLBACK');
+                reject(updateErr);
+                return;
+              }
+              
+              db.run('COMMIT', (commitErr) => {
+                if (commitErr) {
+                  reject(commitErr);
+                } else {
+                  Plan.findById(planId).then(resolve).catch(reject);
+                }
+              });
+            });
+          });
+        });
+      });
+    });
+  }
+
+  // Delete a task from a plan
+  static async deleteTask(planId, taskId, userId) {
+    return new Promise((resolve, reject) => {
+      const db = database.getDB();
+      
+      db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+        
+        // Verify plan exists and belongs to user
+        db.get('SELECT * FROM plans WHERE id = ? AND user_id = ?', [planId, userId], (err, plan) => {
+          if (err) {
+            db.run('ROLLBACK');
+            reject(err);
+            return;
+          }
+          
+          if (!plan) {
+            db.run('ROLLBACK');
+            reject(new Error('Plan not found or unauthorized'));
+            return;
+          }
+          
+          // Check if plan has more than one task (can't delete the last task)
+          db.get('SELECT COUNT(*) as task_count FROM tasks WHERE plan_id = ?', [planId], (countErr, countResult) => {
+            if (countErr) {
+              db.run('ROLLBACK');
+              reject(countErr);
+              return;
+            }
+            
+            if (countResult.task_count <= 1) {
+              db.run('ROLLBACK');
+              reject(new Error('Cannot delete task: plan must have at least one task'));
+              return;
+            }
+            
+            // Verify task belongs to the plan
+            db.get('SELECT plan_order FROM tasks WHERE id = ? AND plan_id = ? AND user_id = ?', [taskId, planId, userId], (taskErr, task) => {
+              if (taskErr) {
+                db.run('ROLLBACK');
+                reject(taskErr);
+                return;
+              }
+              
+              if (!task) {
+                db.run('ROLLBACK');
+                reject(new Error('Task not found or does not belong to plan'));
+                return;
+              }
+              
+              const deletedOrder = task.plan_order;
+              
+              // Delete the task
+              db.run('DELETE FROM tasks WHERE id = ?', [taskId], function(deleteErr) {
+                if (deleteErr) {
+                  db.run('ROLLBACK');
+                  reject(deleteErr);
+                  return;
+                }
+                
+                // Reorder remaining tasks
+                db.run(`
+                  UPDATE tasks 
+                  SET plan_order = plan_order - 1, updated_at = CURRENT_TIMESTAMP 
+                  WHERE plan_id = ? AND plan_order > ?
+                `, [planId, deletedOrder], (reorderErr) => {
+                  if (reorderErr) {
+                    db.run('ROLLBACK');
+                    reject(reorderErr);
+                    return;
+                  }
+                  
+                  // Update plan's current_task_index if necessary
+                  let newCurrentIndex = plan.current_task_index;
+                  if (deletedOrder < plan.current_task_index) {
+                    newCurrentIndex = Math.max(0, plan.current_task_index - 1);
+                  } else if (deletedOrder === plan.current_task_index) {
+                    // If we deleted the current task, keep the same index (next task becomes current)
+                    newCurrentIndex = plan.current_task_index;
+                  }
+                  
+                  db.run(`
+                    UPDATE plans 
+                    SET current_task_index = ?, updated_at = CURRENT_TIMESTAMP 
+                    WHERE id = ?
+                  `, [newCurrentIndex, planId], (planUpdateErr) => {
+                    if (planUpdateErr) {
+                      db.run('ROLLBACK');
+                      reject(planUpdateErr);
+                      return;
+                    }
+                    
+                    db.run('COMMIT', (commitErr) => {
+                      if (commitErr) {
+                        reject(commitErr);
+                      } else {
+                        Plan.findById(planId).then(resolve).catch(reject);
+                      }
+                    });
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  }
 }
 
 module.exports = Plan;

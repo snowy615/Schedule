@@ -20,7 +20,7 @@ function HomePage() {
   const [dragOverDate, setDragOverDate] = useState(null)
   const [selectedPlan, setSelectedPlan] = useState(null)
   const { tasks, loading, addTask, toggleTask, deleteTask, updateTask } = useTasks()
-  const { plans, addPlan, deletePlan, completeCurrentTask, getCurrentTask } = usePlans()
+  const { plans, addPlan, deletePlan, completeCurrentTask, getCurrentTask, addTaskToPlan, updatePlanTask, deletePlanTask } = usePlans()
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
@@ -96,6 +96,48 @@ function HomePage() {
       }
     } catch (error) {
       console.error('Failed to complete current task:', error)
+    }
+  }
+
+  const handleAddTaskToPlan = async (planId, taskData) => {
+    try {
+      const updatedPlan = await addTaskToPlan(planId, taskData)
+      // Refresh the selected plan if it's currently open
+      if (selectedPlan && selectedPlan.id === planId) {
+        const currentTask = await getCurrentTask(planId)
+        setSelectedPlan({ ...updatedPlan, currentTask })
+      }
+    } catch (error) {
+      console.error('Failed to add task to plan:', error)
+      throw error
+    }
+  }
+
+  const handleUpdatePlanTask = async (planId, taskId, updates) => {
+    try {
+      const updatedPlan = await updatePlanTask(planId, taskId, updates)
+      // Refresh the selected plan if it's currently open
+      if (selectedPlan && selectedPlan.id === planId) {
+        const currentTask = await getCurrentTask(planId)
+        setSelectedPlan({ ...updatedPlan, currentTask })
+      }
+    } catch (error) {
+      console.error('Failed to update plan task:', error)
+      throw error
+    }
+  }
+
+  const handleDeletePlanTask = async (planId, taskId) => {
+    try {
+      const updatedPlan = await deletePlanTask(planId, taskId)
+      // Refresh the selected plan if it's currently open
+      if (selectedPlan && selectedPlan.id === planId) {
+        const currentTask = await getCurrentTask(planId)
+        setSelectedPlan({ ...updatedPlan, currentTask })
+      }
+    } catch (error) {
+      console.error('Failed to delete plan task:', error)
+      throw error
     }
   }
 
@@ -452,6 +494,9 @@ function HomePage() {
           plan={selectedPlan}
           onClose={() => setSelectedPlan(null)}
           onCompleteTask={() => handleCompleteCurrentTask(selectedPlan.id)}
+          onAddTask={handleAddTaskToPlan}
+          onUpdateTask={handleUpdatePlanTask}
+          onDeleteTask={handleDeletePlanTask}
         />
       )}
     </div>

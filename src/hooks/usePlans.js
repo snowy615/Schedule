@@ -84,12 +84,66 @@ export function usePlans() {
     }
   }
 
+  const addTaskToPlan = async (planId, taskData) => {
+    if (!user) return
+    
+    try {
+      const updatedPlan = await apiService.addTaskToPlan(planId, taskData)
+      setPlans(prev => 
+        prev.map(plan => 
+          plan.id === planId ? updatedPlan : plan
+        )
+      )
+      return updatedPlan
+    } catch (error) {
+      console.error('Failed to add task to plan:', error)
+      throw error
+    }
+  }
+
+  const updatePlanTask = async (planId, taskId, updates) => {
+    if (!user) return
+    
+    try {
+      const updatedPlan = await apiService.updatePlanTask(planId, taskId, updates)
+      setPlans(prev => 
+        prev.map(plan => 
+          plan.id === planId ? updatedPlan : plan
+        )
+      )
+      return updatedPlan
+    } catch (error) {
+      console.error('Failed to update plan task:', error)
+      throw error
+    }
+  }
+
+  const deletePlanTask = async (planId, taskId) => {
+    if (!user) return
+    
+    try {
+      const updatedPlan = await apiService.deletePlanTask(planId, taskId)
+      setPlans(prev => 
+        prev.map(plan => 
+          plan.id === planId ? updatedPlan : plan
+        )
+      )
+      return updatedPlan
+    } catch (error) {
+      console.error('Failed to delete plan task:', error)
+      throw error
+    }
+  }
+
   return {
     plans,
     loading,
     addPlan,
     deletePlan,
     completeCurrentTask,
-    getCurrentTask
+    getCurrentTask,
+    addTaskToPlan,
+    updatePlanTask,
+    deletePlanTask
   }
 }

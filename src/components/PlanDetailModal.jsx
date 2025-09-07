@@ -1,12 +1,25 @@
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
-import { X, CheckCircle, Circle } from 'lucide-react'
+import { X, CheckCircle, Circle, Edit2, Plus, Trash2, Save, Calendar } from 'lucide-react'
 import { getPriorityStyles } from '../utils/priorityUtils'
+import { formatDateForAPI } from '../utils/dateUtils'
 import './PlanDetailModal.css'
 
-function PlanDetailModal({ plan, onClose, onCompleteTask }) {
+function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTask, onDeleteTask }) {
   const [currentTaskIndex, setCurrentTaskIndex] = useState(plan.current_task_index || 0)
   const [tasks, setTasks] = useState(plan.tasks || [])
+  const [editingTaskId, setEditingTaskId] = useState(null)
+  const [editingTask, setEditingTask] = useState(null)
+  const [showAddTask, setShowAddTask] = useState(false)
+  const [newTask, setNewTask] = useState({ title: '', description: '', priority: 3 })
+
+  const priorityOptions = [
+    { value: 1, label: 'P1 - Urgent', color: '#dc2626' },
+    { value: 2, label: 'P2 - High', color: '#ea580c' },
+    { value: 3, label: 'P3 - Medium', color: '#2563eb' },
+    { value: 4, label: 'P4 - Low', color: '#16a34a' },
+    { value: 5, label: 'P5 - Very Low', color: '#6b7280' }
+  ]
 
   useEffect(() => {
     if (plan.tasks) {
@@ -28,6 +41,67 @@ function PlanDetailModal({ plan, onClose, onCompleteTask }) {
         )
       )
       setCurrentTaskIndex(prev => prev + 1)
+    }
+  }
+
+  const handleEditTask = (task) => {
+    setEditingTaskId(task.id)
+    setEditingTask({ ...task })
+  }
+
+  const handleSaveTask = async () => {
+    if (!editingTask || !editingTask.title.trim()) return
+    
+    try {
+      await onUpdateTask(plan.id, editingTaskId, {
+        title: editingTask.title.trim(),
+        description: editingTask.description ? editingTask.description.trim() : null,
+        priority: editingTask.priority,
+        date: editingTask.date
+      })
+      setEditingTaskId(null)
+      setEditingTask(null)
+    } catch (error) {
+      console.error('Failed to update task:', error)
+      alert('Failed to update task. Please try again.')
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingTaskId(null)
+    setEditingTask(null)
+  }
+
+  const handleDeleteTask = async (taskId) => {
+    if (tasks.length <= 1) {
+      alert('Cannot delete the last task in a plan. A plan must have at least one task.')
+      return
+    }
+    
+    if (window.confirm('Are you sure you want to delete this task?')) {
+      try {
+        await onDeleteTask(plan.id, taskId)
+      } catch (error) {
+        console.error('Failed to delete task:', error)
+        alert('Failed to delete task. Please try again.')
+      }
+    }
+  }
+
+  const handleAddTask = async () => {
+    if (!newTask.title.trim()) return
+    
+    try {
+      await onAddTask(plan.id, {
+        title: newTask.title.trim(),
+        description: newTask.description ? newTask.description.trim() : null,
+        priority: newTask.priority
+      })
+      setNewTask({ title: '', description: '', priority: 3 })
+      setShowAddTask(false)
+    } catch (error) {
+      console.error('Failed to add task:', error)
+      alert('Failed to add task. Please try again.')
     }
   }
 
@@ -107,14 +181,66 @@ function PlanDetailModal({ plan, onClose, onCompleteTask }) {
           )}
 
           <div className="all-tasks-section">
-            <h3>All Tasks</h3>
+            <div className="section-header">
+              <h3>All Tasks</h3>
+              <button 
+                onClick={() => setShowAddTask(true)}
+                className="add-task-button"
+                disabled={isCompleted}
+              >
+                <Plus size={16} />
+                Add Task
+              </button>
+            </div>
+            
+            {showAddTask && (
+              <div className="add-task-form">
+                <div className="form-row">
+                  <input
+                    type="text"
+                    value={newTask.title}
+                    onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Task title..."
+                    className="task-title-input"
+                    autoFocus
+                  />
+                  <select
+                    value={newTask.priority}
+                    onChange={(e) => setNewTask(prev => ({ ...prev, priority: parseInt(e.target.value) }))}
+                    className="task-priority-select"
+                  >
+                    {priorityOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <textarea
+                  value={newTask.description}
+                  onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Task description (optional)..."
+                  className="task-description-input"
+                  rows="2"
+                />
+                <div className="form-actions">
+                  <button onClick={() => setShowAddTask(false)} className="cancel-button">
+                    Cancel
+                  </button>
+                  <button onClick={handleAddTask} className="save-button">
+                    Add Task
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="tasks-timeline">
               {tasks.map((task, index) => {
                 const status = getTaskStatus(task, index)
                 const priorityStyles = getPriorityStyles(task.priority || 3)
+                const isEditing = editingTaskId === task.id
                 
                 return (
-                  <div key={index} className={`timeline-task ${status}`}>
+                  <div key={task.id || index} className={`timeline-task ${status}`}>
                     <div className="timeline-marker">
                       {status === 'completed' ? (
                         <CheckCircle size={20} className="completed-icon" />
@@ -126,41 +252,120 @@ function PlanDetailModal({ plan, onClose, onCompleteTask }) {
                     </div>
                     
                     <div className="timeline-content">
-                      <div 
-                        className="timeline-task-card"
-                        style={{
-                          borderLeft: `4px solid ${priorityStyles.color}`,
-                          backgroundColor: status === 'completed' ? 
-                            'rgba(34, 197, 94, 0.1)' : 
-                            status === 'current' ? 
-                              priorityStyles.backgroundColor : 
-                              'rgba(107, 114, 128, 0.1)'
-                        }}
-                      >
-                        <div className="task-header">
-                          <h5 className={status === 'completed' ? 'completed-text' : ''}>
-                            {task.title}
-                          </h5>
-                          <span 
-                            className="priority-badge" 
-                            style={{ 
-                              color: status === 'completed' ? '#22c55e' : priorityStyles.color 
-                            }}
-                          >
-                            P{task.priority || 3}
-                          </span>
-                        </div>
-                        {task.description && (
-                          <p className={`task-description ${status === 'completed' ? 'completed-text' : ''}`}>
-                            {task.description}
-                          </p>
-                        )}
-                        {status === 'current' && (
-                          <div className="current-task-indicator">
-                            → Current Task
+                      {isEditing ? (
+                        <div className="edit-task-form">
+                          <div className="form-row">
+                            <input
+                              type="text"
+                              value={editingTask.title}
+                              onChange={(e) => setEditingTask(prev => ({ ...prev, title: e.target.value }))}
+                              className="task-title-input"
+                              autoFocus
+                            />
+                            <select
+                              value={editingTask.priority}
+                              onChange={(e) => setEditingTask(prev => ({ ...prev, priority: parseInt(e.target.value) }))}
+                              className="task-priority-select"
+                            >
+                              {priorityOptions.map(option => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
                           </div>
-                        )}
-                      </div>
+                          <textarea
+                            value={editingTask.description || ''}
+                            onChange={(e) => setEditingTask(prev => ({ ...prev, description: e.target.value }))}
+                            placeholder="Task description (optional)..."
+                            className="task-description-input"
+                            rows="2"
+                          />
+                          <div className="form-row">
+                            <label>
+                              <Calendar size={16} />
+                              Date:
+                            </label>
+                            <input
+                              type="date"
+                              value={editingTask.date}
+                              onChange={(e) => setEditingTask(prev => ({ ...prev, date: e.target.value }))}
+                              className="task-date-input"
+                            />
+                          </div>
+                          <div className="form-actions">
+                            <button onClick={handleCancelEdit} className="cancel-button">
+                              Cancel
+                            </button>
+                            <button onClick={handleSaveTask} className="save-button">
+                              <Save size={16} />
+                              Save
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div 
+                          className="timeline-task-card"
+                          style={{
+                            borderLeft: `4px solid ${priorityStyles.color}`,
+                            backgroundColor: status === 'completed' ? 
+                              'rgba(34, 197, 94, 0.1)' : 
+                              status === 'current' ? 
+                                priorityStyles.backgroundColor : 
+                                'rgba(107, 114, 128, 0.1)'
+                          }}
+                        >
+                          <div className="task-header">
+                            <h5 className={status === 'completed' ? 'completed-text' : ''}>
+                              {task.title}
+                            </h5>
+                            <div className="task-actions">
+                              <span 
+                                className="priority-badge" 
+                                style={{ 
+                                  color: status === 'completed' ? '#22c55e' : priorityStyles.color 
+                                }}
+                              >
+                                P{task.priority || 3}
+                              </span>
+                              {status !== 'completed' && (
+                                <>
+                                  <button
+                                    onClick={() => handleEditTask(task)}
+                                    className="edit-task-button"
+                                    title="Edit task"
+                                  >
+                                    <Edit2 size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteTask(task.id)}
+                                    className="delete-task-button"
+                                    title="Delete task"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          {task.description && (
+                            <p className={`task-description ${status === 'completed' ? 'completed-text' : ''}`}>
+                              {task.description}
+                            </p>
+                          )}
+                          {task.date !== plan.date && (
+                            <div className="task-date-info">
+                              <Calendar size={14} />
+                              <span>Due: {format(new Date(task.date), 'MMM d, yyyy')}</span>
+                            </div>
+                          )}
+                          {status === 'current' && (
+                            <div className="current-task-indicator">
+                              → Current Task
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
