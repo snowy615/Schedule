@@ -241,7 +241,7 @@ function HomePage() {
     
     if (!draggedTask) return
     
-    const newDateString = formatDateForAPIWithDelay(targetDate)
+    const newDateString = formatDateForAPI(targetDate)
     const oldDateString = draggedTask.date
     
     // Don't update if dropping on the same date
