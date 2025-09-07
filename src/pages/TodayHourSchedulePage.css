@@ -222,6 +222,13 @@
     grid-template-columns: 80px 1fr;
   }
   
+  .early-hours-collapsed,
+  .early-hours-header,
+  .late-hours-collapsed,
+  .late-hours-header {
+    grid-template-columns: 80px 1fr;
+  }
+  
   .time-label {
     padding: 0.75rem 0.25rem;
   }
@@ -230,12 +237,24 @@
     font-size: 0.8rem;
   }
   
+  .collapsed-time {
+    font-size: 0.7rem;
+  }
+  
   .hour-task-card {
     padding: 0.75rem;
   }
   
   .task-title {
     font-size: 0.9rem;
+  }
+  
+  .expand-early-hours-button,
+  .collapse-early-hours-button,
+  .expand-late-hours-button,
+  .collapse-late-hours-button {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
   }
 }
 
@@ -252,4 +271,175 @@
 .hour-slot.current-hour .time-display {
   color: #646cff;
   font-weight: 700;
+}
+
+/* Early Hours Collapse/Expand Styles */
+.early-hours-collapsed {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  border-bottom: 1px solid #333;
+  background: rgba(100, 108, 255, 0.05);
+}
+
+.early-hours-header {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  border-bottom: 2px solid #646cff;
+  background: rgba(100, 108, 255, 0.1);
+}
+
+.time-label.collapsed {
+  background: rgba(100, 108, 255, 0.1);
+  border-right: 1px solid #646cff;
+}
+
+.collapsed-time {
+  color: #646cff;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.tasks-column.collapsed {
+  background: rgba(100, 108, 255, 0.05);
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.expand-early-hours-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(100, 108, 255, 0.1);
+  color: #646cff;
+  border: 1px solid rgba(100, 108, 255, 0.3);
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  width: 100%;
+  justify-content: center;
+}
+
+.expand-early-hours-button:hover {
+  background: rgba(100, 108, 255, 0.2);
+  border-color: rgba(100, 108, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+.collapse-early-hours-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(100, 108, 255, 0.1);
+  color: #646cff;
+  border: 1px solid rgba(100, 108, 255, 0.3);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  width: 100%;
+  justify-content: center;
+}
+
+.collapse-early-hours-button:hover {
+  background: rgba(100, 108, 255, 0.2);
+  border-color: rgba(100, 108, 255, 0.5);
+}
+
+.task-count {
+  color: #888;
+  font-weight: 400;
+}
+
+.expand-early-hours-button .task-count {
+  color: rgba(100, 108, 255, 0.8);
+}
+
+/* Late Hours Collapse/Expand Styles */
+.late-hours-collapsed {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  border-bottom: 1px solid #333;
+  background: rgba(168, 85, 247, 0.05);
+}
+
+.late-hours-header {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  border-bottom: 2px solid #a855f7;
+  background: rgba(168, 85, 247, 0.1);
+}
+
+.late-hours-collapsed .time-label {
+  background: rgba(168, 85, 247, 0.1);
+  border-right: 1px solid #a855f7;
+}
+
+.late-hours-collapsed .collapsed-time {
+  color: #a855f7;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.late-hours-collapsed .tasks-column {
+  background: rgba(168, 85, 247, 0.05);
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.expand-late-hours-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(168, 85, 247, 0.1);
+  color: #a855f7;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  width: 100%;
+  justify-content: center;
+}
+
+.expand-late-hours-button:hover {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.5);
+  transform: translateY(-1px);
+}
+
+.collapse-late-hours-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(168, 85, 247, 0.1);
+  color: #a855f7;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  width: 100%;
+  justify-content: center;
+}
+
+.collapse-late-hours-button:hover {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.5);
+}
+
+.expand-late-hours-button .task-count {
+  color: rgba(168, 85, 247, 0.8);
 }

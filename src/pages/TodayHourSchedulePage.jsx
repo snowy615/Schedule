@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { format, isToday } from 'date-fns'
-import { Plus, Clock } from 'lucide-react'
+import { Plus, Clock, ChevronDown, ChevronUp } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import TaskModal from '../components/TaskModal'
 import { getTodayDateString, getTomorrowDateString, parseDateSafely } from '../utils/dateUtils'
@@ -10,6 +10,8 @@ import './TodayHourSchedulePage.css'
 
 function TodayHourSchedulePage() {
   const [showTaskModal, setShowTaskModal] = useState(false)
+  const [isEarlyHoursExpanded, setIsEarlyHoursExpanded] = useState(false)
+  const [isLateHoursExpanded, setIsLateHoursExpanded] = useState(false)
   const { tasks, loading, addTask, toggleTask, deleteTask } = useTasks()
   const today = new Date()
 
@@ -50,11 +52,16 @@ function TodayHourSchedulePage() {
     for (let hour = 0; hour < 24; hour++) {
       const timeString = `${hour.toString().padStart(2, '0')}:00`
       const displayTime = formatTime(timeString)
+      const isEarlyHour = hour >= 0 && hour <= 5 // 12 AM to 5 AM
+      const isLateHour = hour >= 22 && hour <= 23 // 10 PM to 11 PM
+      
       slots.push({
         hour,
         timeString,
         displayTime,
-        tasks: getTasksForHour(hour)
+        tasks: getTasksForHour(hour),
+        isEarlyHour,
+        isLateHour
       })
     }
     return slots
@@ -90,6 +97,37 @@ function TodayHourSchedulePage() {
   }
 
   const hourSlots = generateHourSlots()
+  
+  // Filter slots based on early hours and late hours expansion state
+  const visibleSlots = hourSlots.filter(slot => {
+    if (slot.isEarlyHour && !isEarlyHoursExpanded) {
+      return false
+    }
+    if (slot.isLateHour && !isLateHoursExpanded) {
+      return false
+    }
+    return true
+  })
+  
+  // Check if any early hour slots have tasks
+  const earlyHoursHaveTasks = hourSlots
+    .filter(slot => slot.isEarlyHour)
+    .some(slot => slot.tasks.length > 0)
+  
+  // Count tasks in early hours
+  const earlyHoursTaskCount = hourSlots
+    .filter(slot => slot.isEarlyHour)
+    .reduce((count, slot) => count + slot.tasks.length, 0)
+    
+  // Check if any late hour slots have tasks
+  const lateHoursHaveTasks = hourSlots
+    .filter(slot => slot.isLateHour)
+    .some(slot => slot.tasks.length > 0)
+  
+  // Count tasks in late hours
+  const lateHoursTaskCount = hourSlots
+    .filter(slot => slot.isLateHour)
+    .reduce((count, slot) => count + slot.tasks.length, 0)
 
   return (
     <div className="today-hour-schedule-page">
@@ -108,7 +146,49 @@ function TodayHourSchedulePage() {
       </div>
 
       <div className="hour-schedule-grid">
-        {hourSlots.map(slot => (
+        {/* Early Hours Collapse/Expand Button */}
+        {!isEarlyHoursExpanded && (
+          <div className="early-hours-collapsed">
+            <div className="time-label collapsed">
+              <span className="time-display collapsed-time">12:00 AM - 5:59 AM</span>
+            </div>
+            <div className="tasks-column collapsed">
+              <button 
+                className="expand-early-hours-button"
+                onClick={() => setIsEarlyHoursExpanded(true)}
+              >
+                <ChevronDown size={16} />
+                <span>
+                  Show early hours 
+                  {earlyHoursTaskCount > 0 && (
+                    <span className="task-count">({earlyHoursTaskCount} task{earlyHoursTaskCount !== 1 ? 's' : ''})</span>
+                  )}
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Collapse Early Hours Button (when expanded) */}
+        {isEarlyHoursExpanded && (
+          <div className="early-hours-header">
+            <div className="time-label">
+              <span className="time-display">Early Hours</span>
+            </div>
+            <div className="tasks-column">
+              <button 
+                className="collapse-early-hours-button"
+                onClick={() => setIsEarlyHoursExpanded(false)}
+              >
+                <ChevronUp size={16} />
+                <span>Hide early hours (12 AM - 5 AM)</span>
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Hour Slots */}
+        {visibleSlots.map(slot => (
           <div key={slot.hour} className="hour-slot">
             <div className="time-label">
               <span className="time-display">{slot.displayTime}</span>
@@ -189,6 +269,47 @@ function TodayHourSchedulePage() {
             </div>
           </div>
         ))}
+        
+        {/* Late Hours Collapse/Expand Button */}
+        {!isLateHoursExpanded && (
+          <div className="late-hours-collapsed">
+            <div className="time-label collapsed">
+              <span className="time-display collapsed-time">10:00 PM - 11:59 PM</span>
+            </div>
+            <div className="tasks-column collapsed">
+              <button 
+                className="expand-late-hours-button"
+                onClick={() => setIsLateHoursExpanded(true)}
+              >
+                <ChevronDown size={16} />
+                <span>
+                  Show late hours 
+                  {lateHoursTaskCount > 0 && (
+                    <span className="task-count">({lateHoursTaskCount} task{lateHoursTaskCount !== 1 ? 's' : ''})</span>
+                  )}
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Collapse Late Hours Button (when expanded) */}
+        {isLateHoursExpanded && (
+          <div className="late-hours-header">
+            <div className="time-label">
+              <span className="time-display">Late Hours</span>
+            </div>
+            <div className="tasks-column">
+              <button 
+                className="collapse-late-hours-button"
+                onClick={() => setIsLateHoursExpanded(false)}
+              >
+                <ChevronUp size={16} />
+                <span>Hide late hours (10 PM - 11 PM)</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {showTaskModal && (
