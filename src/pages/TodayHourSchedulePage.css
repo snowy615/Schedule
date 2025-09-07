@@ -1,0 +1,255 @@
+/* Today Hour Schedule Page Styles */
+.today-hour-schedule-page {
+  min-height: 100vh;
+  background: #1a1a1a;
+  padding: 1rem;
+}
+
+.hour-schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #333;
+}
+
+.date-info h1 {
+  color: #ffffff;
+  font-size: 2rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.current-date {
+  color: #888;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.add-task-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #646cff;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.add-task-button:hover {
+  background: #535bf2;
+}
+
+.hour-schedule-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.hour-slot {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  border-bottom: 1px solid #333;
+  min-height: 80px;
+}
+
+.time-label {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1rem 0.5rem;
+  background: #2a2a2a;
+  border-right: 1px solid #333;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.time-display {
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.tasks-column {
+  padding: 0.5rem;
+  background: #1a1a1a;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.empty-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 60px;
+  color: #666;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.hour-task-card {
+  background: #2a2a2a;
+  border-radius: 6px;
+  padding: 1rem;
+  transition: all 0.2s;
+  border: 1px solid #333;
+}
+
+.hour-task-card.completed {
+  opacity: 0.7;
+}
+
+.hour-task-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(100, 108, 255, 0.1);
+}
+
+.task-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.task-checkbox {
+  margin-top: 0.25rem;
+  accent-color: #646cff;
+  width: 16px;
+  height: 16px;
+}
+
+.task-title-section {
+  flex: 1;
+}
+
+.task-title {
+  margin: 0 0 0.5rem 0;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.task-title.completed-text {
+  text-decoration: line-through;
+  color: #888;
+}
+
+.task-badges {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.priority-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.4rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.repeat-badge {
+  font-size: 0.8rem;
+}
+
+.delete-button {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: color 0.2s;
+  line-height: 1;
+}
+
+.delete-button:hover {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.task-description {
+  margin: 0.5rem 0;
+  color: #ccc;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.task-description.completed-text {
+  text-decoration: line-through;
+  color: #666;
+}
+
+.task-time-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #888;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .today-hour-schedule-page {
+    padding: 0.5rem;
+  }
+  
+  .hour-schedule-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .date-info h1 {
+    font-size: 1.5rem;
+  }
+  
+  .hour-slot {
+    grid-template-columns: 80px 1fr;
+  }
+  
+  .time-label {
+    padding: 0.75rem 0.25rem;
+  }
+  
+  .time-display {
+    font-size: 0.8rem;
+  }
+  
+  .hour-task-card {
+    padding: 0.75rem;
+  }
+  
+  .task-title {
+    font-size: 0.9rem;
+  }
+}
+
+/* Hour slot highlighting for current time */
+.hour-slot.current-hour {
+  background: rgba(100, 108, 255, 0.05);
+}
+
+.hour-slot.current-hour .time-label {
+  background: rgba(100, 108, 255, 0.1);
+  color: #646cff;
+}
+
+.hour-slot.current-hour .time-display {
+  color: #646cff;
+  font-weight: 700;
+}

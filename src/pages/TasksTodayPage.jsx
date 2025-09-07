@@ -6,9 +6,9 @@ import TaskModal from '../components/TaskModal'
 import { getTodayDateString, getTomorrowDateString, parseDateSafely } from '../utils/dateUtils'
 import { getPriorityStyles } from '../utils/priorityUtils'
 import { formatRepeatType, getRepeatIcon } from '../utils/repeatUtils'
-import './TodayPage.css'
+import './TasksTodayPage.css'
 
-function TodayPage() {
+function TasksTodayPage() {
   const [showTaskModal, setShowTaskModal] = useState(false)
   const { tasks, loading, addTask, toggleTask, deleteTask } = useTasks()
   const today = new Date()
@@ -68,10 +68,10 @@ function TodayPage() {
   }
 
   return (
-    <div className="today-page">
+    <div className="tasks-today-page">
       <div className="today-header">
         <div className="date-info">
-          <h1>Today's Schedule</h1>
+          <h1>Today's Tasks</h1>
           <p className="current-date">{format(today, 'EEEE, MMMM d, yyyy')}</p>
         </div>
         <button 
@@ -240,4 +240,4 @@ function TodayPage() {
   )
 }
 
-export default TodayPage
+export default TasksTodayPage

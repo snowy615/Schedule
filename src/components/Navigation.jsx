@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Calendar, Clock, User, LogOut } from 'lucide-react'
+import { Calendar, Clock, User, LogOut, CheckSquare, Grid3X3 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import './Navigation.css'
 
@@ -25,11 +25,18 @@ function Navigation() {
           <span>Calendar</span>
         </Link>
         <Link 
-          to="/today" 
-          className={`nav-link ${location.pathname === '/today' ? 'active' : ''}`}
+          to="/tasks-today" 
+          className={`nav-link ${location.pathname === '/tasks-today' ? 'active' : ''}`}
         >
-          <Clock size={20} />
-          <span>Today</span>
+          <CheckSquare size={20} />
+          <span>Tasks Today</span>
+        </Link>
+        <Link 
+          to="/hour-schedule" 
+          className={`nav-link ${location.pathname === '/hour-schedule' ? 'active' : ''}`}
+        >
+          <Grid3X3 size={20} />
+          <span>Hour Schedule</span>
         </Link>
       </div>
       <div className="nav-user">

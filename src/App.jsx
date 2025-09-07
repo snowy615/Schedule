@@ -1,7 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import HomePage from './pages/HomePage'
-import TodayPage from './pages/TodayPage'
+import TasksTodayPage from './pages/TasksTodayPage'
+import TodayHourSchedulePage from './pages/TodayHourSchedulePage'
 import Navigation from './components/Navigation'
 import AuthPage from './components/AuthPage'
 import './App.css'
@@ -28,7 +29,8 @@ function AppContent() {
       <main className="main-content">
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/today" element={<TodayPage />} />
+          <Route path="/tasks-today" element={<TasksTodayPage />} />
+          <Route path="/hour-schedule" element={<TodayHourSchedulePage />} />
         </Routes>
       </main>
     </div>
