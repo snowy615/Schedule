@@ -154,24 +154,140 @@ class Task {
 
   // Toggle task completion status
   static async toggleComplete(id, userId) {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       const db = database.getDB();
-      db.run(`
-        UPDATE tasks 
-        SET completed = NOT completed, updated_at = CURRENT_TIMESTAMP 
-        WHERE id = ? AND user_id = ?
-      `, [id, userId], function(err) {
-        if (err) {
-          reject(err);
-        } else if (this.changes === 0) {
+      
+      try {
+        // First get the current task to check if it's recurring
+        const currentTask = await Task.findById(id);
+        if (!currentTask || currentTask.user_id !== userId) {
           reject(new Error('Task not found or unauthorized'));
-        } else {
-          Task.findById(id).then(resolve).catch(reject);
+          return;
         }
-      });
+        
+        // Toggle the completion status
+        db.run(`
+          UPDATE tasks 
+          SET completed = NOT completed, updated_at = CURRENT_TIMESTAMP 
+          WHERE id = ? AND user_id = ?
+        `, [id, userId], async function(err) {
+          if (err) {
+            reject(err);
+            return;
+          }
+          
+          if (this.changes === 0) {
+            reject(new Error('Task not found or unauthorized'));
+            return;
+          }
+          
+          try {
+            // Get the updated task
+            const updatedTask = await Task.findById(id);
+            
+            // If the task was just completed and it's a recurring task, generate next occurrence
+            if (updatedTask.completed && 
+                updatedTask.repeat_type && 
+                updatedTask.repeat_type !== 'none') {
+              
+              // Check if next occurrence already exists
+              const nextOccurrenceExists = await Task.checkNextOccurrenceExists(updatedTask);
+              
+              if (!nextOccurrenceExists) {
+                // Generate the next occurrence
+                await Task.generateNextOccurrence(updatedTask);
+              }
+            }
+            
+            resolve(updatedTask);
+          } catch (generateError) {
+            console.error('Error generating next occurrence:', generateError);
+            // Still resolve with the updated task even if generation fails
+            const updatedTask = await Task.findById(id);
+            resolve(updatedTask);
+          }
+        });
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 }
+
+// Check if next occurrence already exists for a recurring task
+Task.checkNextOccurrenceExists = function(task) {
+  return new Promise((resolve, reject) => {
+    if (!task || task.repeat_type === 'none') {
+      resolve(false);
+      return;
+    }
+    
+    // Calculate what the next date would be
+    const dateComponents = task.date.split('-');
+    const currentDate = new Date(parseInt(dateComponents[0]), parseInt(dateComponents[1]) - 1, parseInt(dateComponents[2]));
+    let nextDate;
+    
+    switch (task.repeat_type) {
+      case 'daily':
+        nextDate = new Date(currentDate);
+        nextDate.setDate(currentDate.getDate() + (task.repeat_interval || 1));
+        break;
+      case 'every_other_day':
+        nextDate = new Date(currentDate);
+        nextDate.setDate(currentDate.getDate() + 2);
+        break;
+      case 'every_three_days':
+        nextDate = new Date(currentDate);
+        nextDate.setDate(currentDate.getDate() + 3);
+        break;
+      case 'weekly':
+        nextDate = new Date(currentDate);
+        nextDate.setDate(currentDate.getDate() + (7 * (task.repeat_interval || 1)));
+        break;
+      case 'monthly':
+        nextDate = new Date(currentDate);
+        nextDate.setMonth(currentDate.getMonth() + (task.repeat_interval || 1));
+        break;
+      case 'yearly':
+        nextDate = new Date(currentDate);
+        nextDate.setFullYear(currentDate.getFullYear() + (task.repeat_interval || 1));
+        break;
+      default:
+        resolve(false);
+        return;
+    }
+    
+    // Check if we should stop generating (past repeat_until date)
+    if (task.repeat_until) {
+      const untilDate = new Date(task.repeat_until);
+      if (nextDate > untilDate) {
+        resolve(false); // No next occurrence should exist
+        return;
+      }
+    }
+    
+    // Format the expected next date
+    const nextDateString = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
+    
+    // Check if a task already exists for this date with the same parent
+    const database = require('../database');
+    const db = database.getDB();
+    const parentId = task.parent_task_id || task.id;
+    
+    db.get(`
+      SELECT COUNT(*) as count FROM tasks 
+      WHERE user_id = ? 
+      AND (parent_task_id = ? OR (id = ? AND repeat_type != 'none'))
+      AND date = ?
+    `, [task.user_id, parentId, parentId, nextDateString], (err, row) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(row.count > 0);
+      }
+    });
+  });
+};
 
 // Generate next occurrence for recurring task
 Task.generateNextOccurrence = function(parentTask) {

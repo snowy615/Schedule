@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import apiService from '../services/apiService'
-import recurringTaskService from '../services/recurringTaskService'
 
 export function useTasks() {
   const [tasks, setTasks] = useState([])
@@ -20,14 +19,6 @@ export function useTasks() {
         setLoading(true)
         const tasksData = await apiService.getTasks()
         setTasks(tasksData)
-        
-        // Auto-generate recurring tasks
-        const newRecurringTasks = await recurringTaskService.autoGenerateRecurringTasks(tasksData)
-        if (newRecurringTasks.length > 0) {
-          // Reload tasks to include the newly generated ones
-          const updatedTasks = await apiService.getTasks()
-          setTasks(updatedTasks)
-        }
       } catch (error) {
         console.error('Failed to load tasks:', error)
         setTasks([])
@@ -57,11 +48,29 @@ export function useTasks() {
     
     try {
       const updatedTask = await apiService.toggleTask(taskId)
+      
+      // Update the specific task
       setTasks(prev => 
         prev.map(task => 
           task.id === taskId ? updatedTask : task
         )
       )
+      
+      // If a recurring task was just completed, reload tasks to get any newly generated next occurrence
+      if (updatedTask.completed && 
+          updatedTask.repeat_type && 
+          updatedTask.repeat_type !== 'none') {
+        // Small delay to ensure the next occurrence has been created
+        setTimeout(async () => {
+          try {
+            const refreshedTasks = await apiService.getTasks()
+            setTasks(refreshedTasks)
+          } catch (error) {
+            console.error('Failed to refresh tasks after recurring task completion:', error)
+          }
+        }, 500)
+      }
+      
       return updatedTask
     } catch (error) {
       console.error('Failed to toggle task:', error)
