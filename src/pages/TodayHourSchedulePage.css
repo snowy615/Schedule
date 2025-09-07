@@ -79,6 +79,7 @@
 }
 
 .tasks-column {
+  position: relative;
   padding: 0.5rem;
   background: #1a1a1a;
   min-height: 80px;
@@ -104,6 +105,29 @@
   padding: 1rem;
   transition: all 0.2s;
   border: 1px solid #333;
+}
+
+/* Continuous task block styles */
+.hour-task-card.continuous-task {
+  padding: 0.75rem;
+  margin: 0;
+  overflow: hidden;
+}
+
+.task-continuation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0.5rem;
+}
+
+.continuation-text {
+  color: #888;
+  font-size: 0.8rem;
+  font-style: italic;
+  text-align: center;
+  opacity: 0.8;
 }
 
 .hour-task-card.completed {
@@ -202,7 +226,7 @@
   margin-top: 0.5rem;
 }
 
-/* Responsive Design */
+/* Continuous task responsive adjustments */
 @media (max-width: 768px) {
   .today-hour-schedule-page {
     padding: 0.5rem;
@@ -245,8 +269,27 @@
     padding: 0.75rem;
   }
   
+  .hour-task-card.continuous-task {
+    padding: 0.5rem;
+  }
+  
+  .continuation-text {
+    font-size: 0.7rem;
+  }
+  
   .task-title {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    line-height: 1.2;
+  }
+  
+  .task-description {
+    font-size: 0.8rem;
+    margin: 0.25rem 0;
+  }
+  
+  .task-time-info {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
   }
   
   .expand-early-hours-button,

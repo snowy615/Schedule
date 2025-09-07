@@ -76,12 +76,70 @@ function TodayHourSchedulePage() {
   }
 
   const getTasksForHour = (hour) => {
+    return getTasksSpanningHour(hour)
+  }
+
+  // Get tasks that span through a specific hour (including partial overlaps)
+  const getTasksSpanningHour = (hour) => {
     return todayTasks.filter(task => {
-      if (!task.start_time) return false
+      if (!task.start_time || !task.finish_time) {
+        // For tasks without end time, only show in start hour
+        if (!task.start_time) return false
+        const taskHour = parseInt(task.start_time.split(':')[0])
+        return taskHour === hour
+      }
       
-      const taskHour = parseInt(task.start_time.split(':')[0])
-      return taskHour === hour
+      const [startHour, startMin] = task.start_time.split(':').map(Number)
+      const [endHour, endMin] = task.finish_time.split(':').map(Number)
+      
+      const taskStartTime = startHour + startMin / 60
+      const taskEndTime = endHour + endMin / 60
+      
+      // Task spans this hour if it starts before or during this hour and ends after it starts
+      return taskStartTime <= hour + 1 && taskEndTime > hour
     })
+  }
+
+  // Calculate task positioning within hour slots
+  const getTaskPositioning = (task, hour) => {
+    if (!task.start_time || !task.finish_time) {
+      // For tasks without proper time, show them at the top of the hour
+      return {
+        top: 0,
+        height: 60, // Default 1 hour height
+        startOffset: 0,
+        endOffset: 0,
+        isFirstHour: true,
+        isLastHour: true
+      }
+    }
+    
+    const [startHour, startMin] = task.start_time.split(':').map(Number)
+    const [endHour, endMin] = task.finish_time.split(':').map(Number)
+    
+    const taskStartTime = startHour + startMin / 60
+    const taskEndTime = endHour + endMin / 60
+    
+    // Calculate position within this hour slot (80px per hour)
+    const hourStart = hour
+    const hourEnd = hour + 1
+    
+    // Find the overlap with this hour
+    const overlapStart = Math.max(taskStartTime, hourStart)
+    const overlapEnd = Math.min(taskEndTime, hourEnd)
+    
+    // Convert to pixels (80px per hour to match min-height)
+    const startOffset = (overlapStart - hourStart) * 80
+    const height = (overlapEnd - overlapStart) * 80
+    
+    return {
+      top: startOffset,
+      height: Math.max(height, 20), // Minimum 20px height
+      startOffset: startOffset,
+      endOffset: 80 - (startOffset + height),
+      isFirstHour: hour === startHour,
+      isLastHour: hour === endHour || (endHour === hour + 1 && endMin === 0)
+    }
   }
 
   const getTaskDuration = (startTime, endTime) => {
@@ -193,7 +251,7 @@ function TodayHourSchedulePage() {
             <div className="time-label">
               <span className="time-display">{slot.displayTime}</span>
             </div>
-            <div className="tasks-column">
+            <div className="tasks-column" style={{ position: 'relative', minHeight: '80px' }}>
               {slot.tasks.length === 0 ? (
                 <div className="empty-slot">
                   <span>No tasks scheduled</span>
@@ -201,67 +259,85 @@ function TodayHourSchedulePage() {
               ) : (
                 slot.tasks.map(task => {
                   const priorityStyles = getPriorityStyles(task.priority || 3)
-                  const duration = getTaskDuration(task.start_time, task.finish_time)
+                  const positioning = getTaskPositioning(task, slot.hour)
                   
                   return (
                     <div 
-                      key={task.id} 
-                      className={`hour-task-card ${task.completed ? 'completed' : 'pending'}`}
+                      key={`${task.id}-${slot.hour}`}
+                      className={`hour-task-card continuous-task ${task.completed ? 'completed' : 'pending'}`}
                       style={{
+                        position: 'absolute',
+                        top: `${positioning.top}px`,
+                        left: '0.5rem',
+                        right: '0.5rem',
+                        height: `${positioning.height}px`,
                         borderLeft: `4px solid ${priorityStyles.color}`,
                         backgroundColor: task.completed ? 
                           'rgba(34, 197, 94, 0.1)' : 
                           priorityStyles.backgroundColor,
-                        minHeight: `${duration * 60}px` // Scale based on duration
+                        borderTopLeftRadius: positioning.isFirstHour ? '6px' : '2px',
+                        borderTopRightRadius: positioning.isFirstHour ? '6px' : '2px',
+                        borderBottomLeftRadius: positioning.isLastHour ? '6px' : '2px',
+                        borderBottomRightRadius: positioning.isLastHour ? '6px' : '2px',
+                        zIndex: 2
                       }}
                     >
-                      <div className="task-header">
-                        <input
-                          type="checkbox"
-                          checked={task.completed}
-                          onChange={() => toggleTask(task.id)}
-                          className="task-checkbox"
-                        />
-                        <div className="task-title-section">
-                          <h3 className={`task-title ${task.completed ? 'completed-text' : ''}`}>
-                            {getRepeatIcon(task.repeat_type)} {task.title}
-                          </h3>
-                          <div className="task-badges">
-                            <span className="priority-badge" style={{ color: priorityStyles.color }}>
-                              P{task.priority || 3}
-                            </span>
-                            {task.repeat_type && task.repeat_type !== 'none' && (
-                              <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
-                                🔄
-                              </span>
-                            )}
+                      {positioning.isFirstHour && (
+                        <>
+                          <div className="task-header">
+                            <input
+                              type="checkbox"
+                              checked={task.completed}
+                              onChange={() => toggleTask(task.id)}
+                              className="task-checkbox"
+                            />
+                            <div className="task-title-section">
+                              <h3 className={`task-title ${task.completed ? 'completed-text' : ''}`}>
+                                {getRepeatIcon(task.repeat_type)} {task.title}
+                              </h3>
+                              <div className="task-badges">
+                                <span className="priority-badge" style={{ color: priorityStyles.color }}>
+                                  P{task.priority || 3}
+                                </span>
+                                {task.repeat_type && task.repeat_type !== 'none' && (
+                                  <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
+                                    🔄
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <button 
+                              onClick={() => deleteTask(task.id)}
+                              className="delete-button"
+                            >
+                              ×
+                            </button>
                           </div>
-                        </div>
-                        <button 
-                          onClick={() => deleteTask(task.id)}
-                          className="delete-button"
-                        >
-                          ×
-                        </button>
-                      </div>
-                      {task.description && (
-                        <p className={`task-description ${task.completed ? 'completed-text' : ''}`}>
-                          {task.description}
-                        </p>
+                          {task.description && positioning.height > 100 && (
+                            <p className={`task-description ${task.completed ? 'completed-text' : ''}`}>
+                              {task.description}
+                            </p>
+                          )}
+                          <div className="task-time-info">
+                            <Clock size={14} />
+                            <span>
+                              {task.start_time && task.finish_time
+                                ? `${formatTime(task.start_time)} - ${formatTime(task.finish_time)}`
+                                : task.start_time
+                                ? `Start: ${formatTime(task.start_time)}`
+                                : task.finish_time
+                                ? `End: ${formatTime(task.finish_time)}`
+                                : 'No time set'
+                              }
+                            </span>
+                          </div>
+                        </>
                       )}
-                      <div className="task-time-info">
-                        <Clock size={14} />
-                        <span>
-                          {task.start_time && task.finish_time
-                            ? `${formatTime(task.start_time)} - ${formatTime(task.finish_time)}`
-                            : task.start_time
-                            ? `Start: ${formatTime(task.start_time)}`
-                            : task.finish_time
-                            ? `End: ${formatTime(task.finish_time)}`
-                            : 'No time set'
-                          }
-                        </span>
-                      </div>
+                      {!positioning.isFirstHour && (
+                        <div className="task-continuation">
+                          <span className="continuation-text">{task.title} (continued)</span>
+                        </div>
+                      )}
                     </div>
                   )
                 })
