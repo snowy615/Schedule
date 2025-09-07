@@ -306,6 +306,12 @@
   flex: 1;
 }
 
+.task-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .priority-badge {
   font-size: 0.7rem;
   font-weight: 600;
@@ -314,6 +320,17 @@
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid currentColor;
   opacity: 0.8;
+  white-space: nowrap;
+}
+
+.repeat-badge {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.3rem;
+  border-radius: 50%;
+  background: rgba(100, 108, 255, 0.2);
+  border: 1px solid #646cff;
+  color: #646cff;
+  cursor: help;
   white-space: nowrap;
 }
 

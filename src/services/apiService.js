@@ -125,6 +125,13 @@ class ApiService {
       method: 'DELETE',
     });
   }
+
+  async generateNextOccurrence(id) {
+    const data = await this.apiCall(`/tasks/${id}/generate-next`, {
+      method: 'POST',
+    });
+    return data.task;
+  }
 }
 
 export default new ApiService();

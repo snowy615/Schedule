@@ -4,14 +4,26 @@ class Task {
   // Create a new task
   static async create(userId, taskData) {
     return new Promise((resolve, reject) => {
-      const { title, description, date, start_time, finish_time, priority } = taskData;
+      const { title, description, date, start_time, finish_time, priority, repeat_type, repeat_interval, repeat_until, parent_task_id } = taskData;
       const db = database.getDB();
       const stmt = db.prepare(`
-        INSERT INTO tasks (user_id, title, description, date, start_time, finish_time, priority) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO tasks (user_id, title, description, date, start_time, finish_time, priority, repeat_type, repeat_interval, repeat_until, parent_task_id) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
-      stmt.run([userId, title, description || null, date, start_time || null, finish_time || null, priority || 3], function(err) {
+      stmt.run([
+        userId, 
+        title, 
+        description || null, 
+        date, 
+        start_time || null, 
+        finish_time || null, 
+        priority || 3,
+        repeat_type || 'none',
+        repeat_interval || 1,
+        repeat_until || null,
+        parent_task_id || null
+      ], function(err) {
         if (err) {
           reject(err);
         } else {
@@ -88,7 +100,7 @@ class Task {
   // Update a task
   static async update(id, userId, updates) {
     return new Promise((resolve, reject) => {
-      const allowedFields = ['title', 'description', 'date', 'start_time', 'finish_time', 'priority', 'completed'];
+      const allowedFields = ['title', 'description', 'date', 'start_time', 'finish_time', 'priority', 'repeat_type', 'repeat_interval', 'repeat_until', 'completed'];
       const fields = [];
       const values = [];
 
@@ -160,5 +172,114 @@ class Task {
     });
   }
 }
+
+// Generate next occurrence for recurring task
+Task.generateNextOccurrence = function(parentTask) {
+  return new Promise((resolve, reject) => {
+    if (!parentTask || parentTask.repeat_type === 'none') {
+      resolve(null);
+      return;
+    }
+    
+    // Calculate next date based on repeat type
+    const dateComponents = parentTask.date.split('-');
+    const currentDate = new Date(parseInt(dateComponents[0]), parseInt(dateComponents[1]) - 1, parseInt(dateComponents[2]));
+    let nextDate;
+    
+    switch (parentTask.repeat_type) {
+      case 'daily':
+        nextDate = new Date(currentDate);
+        nextDate.setDate(currentDate.getDate() + (parentTask.repeat_interval || 1));
+        break;
+        
+      case 'every_other_day':
+        nextDate = new Date(currentDate);
+        nextDate.setDate(currentDate.getDate() + 2);
+        break;
+        
+      case 'every_three_days':
+        nextDate = new Date(currentDate);
+        nextDate.setDate(currentDate.getDate() + 3);
+        break;
+        
+      case 'weekly':
+        nextDate = new Date(currentDate);
+        nextDate.setDate(currentDate.getDate() + (7 * (parentTask.repeat_interval || 1)));
+        break;
+        
+      case 'monthly':
+        nextDate = new Date(currentDate);
+        nextDate.setMonth(currentDate.getMonth() + (parentTask.repeat_interval || 1));
+        break;
+        
+      case 'yearly':
+        nextDate = new Date(currentDate);
+        nextDate.setFullYear(currentDate.getFullYear() + (parentTask.repeat_interval || 1));
+        break;
+        
+      default:
+        resolve(null);
+        return;
+    }
+    
+    // Check if we should stop generating (past repeat_until date)
+    if (parentTask.repeat_until) {
+      const untilDate = new Date(parentTask.repeat_until);
+      if (nextDate > untilDate) {
+        resolve(null);
+        return;
+      }
+    }
+    
+    // Format date for API
+    const nextDateString = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
+    
+    // Create new task instance
+    const nextTaskData = {
+      title: parentTask.title,
+      description: parentTask.description,
+      date: nextDateString,
+      start_time: parentTask.start_time,
+      finish_time: parentTask.finish_time,
+      priority: parentTask.priority,
+      repeat_type: parentTask.repeat_type,
+      repeat_interval: parentTask.repeat_interval,
+      repeat_until: parentTask.repeat_until,
+      parent_task_id: parentTask.parent_task_id || parentTask.id
+    };
+    
+    Task.create(parentTask.user_id, nextTaskData).then(resolve).catch(reject);
+  });
+};
+
+// Find recurring tasks that need next occurrence generated
+Task.findRecurringTasksNeedingGeneration = function(userId, daysAhead = 30) {
+  return new Promise((resolve, reject) => {
+    const database = require('../database');
+    const db = database.getDB();
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + daysAhead);
+    const futureDateString = `${futureDate.getFullYear()}-${String(futureDate.getMonth() + 1).padStart(2, '0')}-${String(futureDate.getDate()).padStart(2, '0')}`;
+    
+    db.all(`
+      SELECT * FROM tasks 
+      WHERE user_id = ? 
+      AND repeat_type != 'none' 
+      AND (repeat_until IS NULL OR repeat_until >= date('now'))
+      AND date <= ?
+      ORDER BY date ASC
+    `, [userId, futureDateString], (err, rows) => {
+      if (err) {
+        reject(err);
+      } else {
+        const tasks = rows.map(row => ({
+          ...row,
+          completed: Boolean(row.completed)
+        }));
+        resolve(tasks);
+      }
+    });
+  });
+};
 
 module.exports = Task;

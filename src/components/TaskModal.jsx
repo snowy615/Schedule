@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
 import { X } from 'lucide-react'
+import { REPEAT_OPTIONS } from '../utils/repeatUtils'
 import './TaskModal.css'
 
 function TaskModal({ onClose, onSave, selectedDate }) {
@@ -9,7 +10,9 @@ function TaskModal({ onClose, onSave, selectedDate }) {
     description: '',
     start_time: '',
     finish_time: '',
-    priority: 3
+    priority: 3,
+    repeat_type: 'none',
+    repeat_until: ''
   })
 
   const priorityOptions = [
@@ -25,7 +28,7 @@ function TaskModal({ onClose, onSave, selectedDate }) {
     if (!formData.title.trim()) return
     
     onSave(formData)
-    setFormData({ title: '', description: '', start_time: '', finish_time: '', priority: 3 })
+    setFormData({ title: '', description: '', start_time: '', finish_time: '', priority: 3, repeat_type: 'none', repeat_until: '' })
   }
 
   const handleChange = (field, value) => {
@@ -106,6 +109,37 @@ function TaskModal({ onClose, onSave, selectedDate }) {
               ))}
             </select>
           </div>
+
+          <div className="form-group">
+            <label htmlFor="repeat_type">Repeat</label>
+            <select
+              id="repeat_type"
+              value={formData.repeat_type}
+              onChange={(e) => handleChange('repeat_type', e.target.value)}
+              className="repeat-select"
+            >
+              {REPEAT_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {formData.repeat_type !== 'none' && (
+            <div className="form-group">
+              <label htmlFor="repeat_until">Repeat Until (optional)</label>
+              <input
+                id="repeat_until"
+                type="date"
+                value={formData.repeat_until}
+                onChange={(e) => handleChange('repeat_until', e.target.value)}
+                className="date-input"
+                min={format(selectedDate, 'yyyy-MM-dd')}
+              />
+              <small className="field-hint">Leave empty to repeat indefinitely</small>
+            </div>
+          )}
 
           <div className="form-actions">
             <button type="button" onClick={onClose} className="cancel-button">

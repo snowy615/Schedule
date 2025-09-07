@@ -194,6 +194,48 @@
   padding: 8px;
 }
 
+/* Repeat Styles */
+.repeat-select,
+.date-input {
+  width: 100%;
+  padding: 0.75rem;
+  background: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.repeat-select:focus,
+.date-input:focus {
+  outline: none;
+  border-color: #646cff;
+  box-shadow: 0 0 0 3px rgba(100, 108, 255, 0.1);
+}
+
+.repeat-select option {
+  background: #2a2a2a;
+  color: #ffffff;
+  padding: 8px;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 0.25rem;
+  color: #888;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+.date-input::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
 @media (max-width: 768px) {
   .modal-content {
     margin: 1rem;

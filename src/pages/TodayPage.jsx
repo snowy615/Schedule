@@ -5,6 +5,7 @@ import { useTasks } from '../hooks/useTasks'
 import TaskModal from '../components/TaskModal'
 import { getTodayDateString, getTomorrowDateString } from '../utils/dateUtils'
 import { getPriorityStyles } from '../utils/priorityUtils'
+import { formatRepeatType, getRepeatIcon } from '../utils/repeatUtils'
 import './TodayPage.css'
 
 function TodayPage() {
@@ -135,10 +136,17 @@ function TodayPage() {
                           className="task-checkbox"
                         />
                         <div className="task-title-section">
-                          <h3 className="task-title">{task.title}</h3>
-                          <span className="priority-badge" style={{ color: priorityStyles.color }}>
-                            P{task.priority || 3}
-                          </span>
+                          <h3 className="task-title">{getRepeatIcon(task.repeat_type)} {task.title}</h3>
+                          <div className="task-badges">
+                            <span className="priority-badge" style={{ color: priorityStyles.color }}>
+                              P{task.priority || 3}
+                            </span>
+                            {task.repeat_type && task.repeat_type !== 'none' && (
+                              <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
+                                🔄
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <button 
                           onClick={() => deleteTask(task.id)}
@@ -184,10 +192,17 @@ function TodayPage() {
                               className="task-checkbox"
                             />
                             <div className="task-title-section">
-                              <h3 className="task-title">{task.title}</h3>
-                              <span className="priority-badge" style={{ color: priorityStyles.color }}>
-                                P{task.priority || 3}
-                              </span>
+                              <h3 className="task-title">{getRepeatIcon(task.repeat_type)} {task.title}</h3>
+                              <div className="task-badges">
+                                <span className="priority-badge" style={{ color: priorityStyles.color }}>
+                                  P{task.priority || 3}
+                                </span>
+                                {task.repeat_type && task.repeat_type !== 'none' && (
+                                  <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
+                                    🔄
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             <button 
                               onClick={() => deleteTask(task.id)}

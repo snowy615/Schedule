@@ -33,7 +33,7 @@ router.get('/date/:date', async (req, res) => {
 // Create a new task
 router.post('/', async (req, res) => {
   try {
-    const { title, description, date, start_time, finish_time, priority } = req.body;
+    const { title, description, date, start_time, finish_time, priority, repeat_type, repeat_interval, repeat_until } = req.body;
 
     // Validate required fields
     if (!title || !date) {
@@ -60,6 +60,17 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Priority must be an integer between 1 and 5' });
     }
 
+    // Validate repeat_type if provided
+    const validRepeatTypes = ['none', 'daily', 'every_other_day', 'every_three_days', 'weekly', 'monthly', 'yearly'];
+    if (repeat_type && !validRepeatTypes.includes(repeat_type)) {
+      return res.status(400).json({ error: 'Invalid repeat type' });
+    }
+
+    // Validate repeat_until date format if provided
+    if (repeat_until && !dateRegex.test(repeat_until)) {
+      return res.status(400).json({ error: 'Repeat until date must be in YYYY-MM-DD format' });
+    }
+
     // Validate that finish_time is after start_time if both are provided
     if (start_time && finish_time && start_time >= finish_time) {
       return res.status(400).json({ error: 'Finish time must be after start time' });
@@ -71,7 +82,10 @@ router.post('/', async (req, res) => {
       date,
       start_time,
       finish_time,
-      priority
+      priority,
+      repeat_type,
+      repeat_interval,
+      repeat_until
     });
 
     res.status(201).json({
@@ -108,7 +122,7 @@ router.get('/:id', async (req, res) => {
 // Update a task
 router.put('/:id', async (req, res) => {
   try {
-    const { title, description, date, start_time, finish_time, priority, completed } = req.body;
+    const { title, description, date, start_time, finish_time, priority, repeat_type, repeat_interval, repeat_until, completed } = req.body;
     const updates = {};
 
     // Only include provided fields in updates
@@ -142,6 +156,28 @@ router.put('/:id', async (req, res) => {
         return res.status(400).json({ error: 'Priority must be an integer between 1 and 5' });
       }
       updates.priority = priority;
+    }
+    if (repeat_type !== undefined) {
+      // Validate repeat_type
+      const validRepeatTypes = ['none', 'daily', 'every_other_day', 'every_three_days', 'weekly', 'monthly', 'yearly'];
+      if (!validRepeatTypes.includes(repeat_type)) {
+        return res.status(400).json({ error: 'Invalid repeat type' });
+      }
+      updates.repeat_type = repeat_type;
+    }
+    if (repeat_interval !== undefined) {
+      // Validate repeat_interval
+      if (repeat_interval < 1 || !Number.isInteger(repeat_interval)) {
+        return res.status(400).json({ error: 'Repeat interval must be a positive integer' });
+      }
+      updates.repeat_interval = repeat_interval;
+    }
+    if (repeat_until !== undefined) {
+      // Validate repeat_until date format if provided
+      if (repeat_until && !/^\d{4}-\d{2}-\d{2}$/.test(repeat_until)) {
+        return res.status(400).json({ error: 'Repeat until date must be in YYYY-MM-DD format' });
+      }
+      updates.repeat_until = repeat_until;
     }
     if (completed !== undefined) updates.completed = completed ? 1 : 0;
 
@@ -197,6 +233,40 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: error.message });
     }
     console.error('Delete task error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Generate next occurrence for a recurring task
+router.post('/:id/generate-next', async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    // Check if task belongs to current user
+    if (task.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    if (task.repeat_type === 'none') {
+      return res.status(400).json({ error: 'Task is not recurring' });
+    }
+
+    const nextTask = await Task.generateNextOccurrence(task);
+    
+    if (!nextTask) {
+      return res.status(400).json({ error: 'No next occurrence can be generated (may have reached repeat_until date)' });
+    }
+
+    res.status(201).json({
+      message: 'Next occurrence generated successfully',
+      task: nextTask
+    });
+  } catch (error) {
+    console.error('Generate next occurrence error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

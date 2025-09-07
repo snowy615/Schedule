@@ -125,6 +125,18 @@
   border: 2px solid #646cff;
 }
 
+.calendar-day.other-month {
+  opacity: 0.4;
+}
+
+.calendar-day.other-month .day-number {
+  color: #666;
+}
+
+.calendar-day.other-month .task-indicator {
+  opacity: 0.6;
+}
+
 .day-number {
   font-weight: 600;
   color: #ffffff;
@@ -304,6 +316,12 @@
   margin-bottom: 0.5rem;
 }
 
+.task-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .priority-badge {
   font-size: 0.75rem;
   font-weight: 600;
@@ -312,6 +330,22 @@
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid currentColor;
   opacity: 0.8;
+}
+
+.repeat-badge {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 50%;
+  background: rgba(100, 108, 255, 0.2);
+  border: 1px solid #646cff;
+  color: #646cff;
+  cursor: help;
+}
+
+.repeat-info {
+  margin: 0.5rem 0;
+  color: #888;
+  font-style: italic;
 }
 
 .task-indicator {

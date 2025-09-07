@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns'
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import TaskModal from '../components/TaskModal'
 import { formatDateForAPI, formatDateForAPIWithDelay } from '../utils/dateUtils'
 import { getPriorityStyles } from '../utils/priorityUtils'
+import { formatRepeatType, getRepeatIcon } from '../utils/repeatUtils'
 import './HomePage.css'
 
 function HomePage() {
@@ -17,7 +18,9 @@ function HomePage() {
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
-  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd })
+  const calendarStart = startOfWeek(monthStart)
+  const calendarEnd = endOfWeek(monthEnd)
+  const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
 
   const navigateMonth = (direction) => {
     setCurrentDate(prev => {
@@ -168,10 +171,11 @@ function HomePage() {
         </div>
         
         <div className="days-grid">
-          {daysInMonth.map(day => {
+          {calendarDays.map(day => {
             const dayTasks = getTasksForDate(day)
             const isSelected = isSameDay(day, selectedDate)
             const isTodayDate = isToday(day)
+            const isCurrentMonth = day.getMonth() === currentDate.getMonth()
             
             return (
               <div
@@ -180,6 +184,8 @@ function HomePage() {
                   isSelected ? 'selected' : ''
                 } ${
                   isTodayDate ? 'today' : ''
+                } ${
+                  !isCurrentMonth ? 'other-month' : ''
                 } ${
                   dragOverDate && isSameDay(dragOverDate, day) ? 'drag-over' : ''
                 }`}
@@ -206,13 +212,13 @@ function HomePage() {
                           backgroundColor: priorityStyles.backgroundColor,
                           opacity: isDragging ? 0.5 : 1
                         }}
-                        title={`${task.title} (${task.priority ? `P${task.priority}` : 'P3'})`}
+                        title={`${task.title} (${task.priority ? `P${task.priority}` : 'P3'}${task.repeat_type && task.repeat_type !== 'none' ? ` - ${formatRepeatType(task.repeat_type)}` : ''})`}
                         draggable
                         onDragStart={(e) => handleDragStart(e, task)}
                         onDragEnd={handleDragEnd}
                       >
-                        {task.title.substring(0, 20)}
-                        {task.title.length > 20 ? '...' : ''}
+                        {getRepeatIcon(task.repeat_type)} {task.title.substring(0, 18)}
+                        {task.title.length > 18 ? '...' : ''}
                       </div>
                     )
                   })}
@@ -263,12 +269,26 @@ function HomePage() {
                     />
                     <div className="task-content">
                       <div className="task-header-info">
-                        <h4>{task.title}</h4>
-                        <span className="priority-badge" style={{ color: priorityStyles.color }}>
-                          P{task.priority || 3}
-                        </span>
+                        <h4>{getRepeatIcon(task.repeat_type)} {task.title}</h4>
+                        <div className="task-badges">
+                          <span className="priority-badge" style={{ color: priorityStyles.color }}>
+                            P{task.priority || 3}
+                          </span>
+                          {task.repeat_type && task.repeat_type !== 'none' && (
+                            <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
+                              🔄
+                            </span>
+                          )}
+                        </div>
                       </div>
                       {task.description && <p>{task.description}</p>}
+                      {task.repeat_type && task.repeat_type !== 'none' && (
+                        <div className="repeat-info">
+                          <small>Repeats: {formatRepeatType(task.repeat_type)}
+                            {task.repeat_until && ` until ${new Date(task.repeat_until).toLocaleDateString()}`}
+                          </small>
+                        </div>
+                      )}
                       {(task.start_time || task.finish_time) && (
                         <span className="task-time">
                           {task.start_time && task.finish_time 

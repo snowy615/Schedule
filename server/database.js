@@ -54,10 +54,15 @@ class Database {
             start_time TEXT,
             finish_time TEXT,
             priority INTEGER DEFAULT 3,
+            repeat_type TEXT DEFAULT 'none',
+            repeat_interval INTEGER DEFAULT 1,
+            repeat_until TEXT,
+            parent_task_id INTEGER,
             completed BOOLEAN DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+            FOREIGN KEY (parent_task_id) REFERENCES tasks (id) ON DELETE CASCADE
           )
         `, (err) => {
           if (err) {
@@ -70,6 +75,9 @@ class Database {
           this.migrateTimeColumn().then(() => {
             // Add priority column to existing tables if needed
             return this.addPriorityColumn();
+          }).then(() => {
+            // Add repetition columns to existing tables if needed
+            return this.addRepetitionColumns();
           }).then(() => {
             console.log('Database tables created successfully');
             resolve();
@@ -157,6 +165,82 @@ class Database {
         } else {
           resolve();
         }
+      });
+    });
+  }
+
+  // Add repetition columns to existing tasks table if needed
+  async addRepetitionColumns() {
+    return new Promise((resolve, reject) => {
+      // Check if repetition columns exist
+      this.db.all("PRAGMA table_info(tasks)", (err, columns) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        const hasRepeatType = columns.some(col => col.name === 'repeat_type');
+        const hasRepeatInterval = columns.some(col => col.name === 'repeat_interval');
+        const hasRepeatUntil = columns.some(col => col.name === 'repeat_until');
+        const hasParentTaskId = columns.some(col => col.name === 'parent_task_id');
+        
+        const addColumnsPromises = [];
+        
+        if (!hasRepeatType) {
+          addColumnsPromises.push(new Promise((resolve, reject) => {
+            this.db.run("ALTER TABLE tasks ADD COLUMN repeat_type TEXT DEFAULT 'none'", (err) => {
+              if (err && !err.message.includes('duplicate column name')) {
+                reject(err);
+              } else {
+                console.log('repeat_type column added successfully');
+                resolve();
+              }
+            });
+          }));
+        }
+        
+        if (!hasRepeatInterval) {
+          addColumnsPromises.push(new Promise((resolve, reject) => {
+            this.db.run("ALTER TABLE tasks ADD COLUMN repeat_interval INTEGER DEFAULT 1", (err) => {
+              if (err && !err.message.includes('duplicate column name')) {
+                reject(err);
+              } else {
+                console.log('repeat_interval column added successfully');
+                resolve();
+              }
+            });
+          }));
+        }
+        
+        if (!hasRepeatUntil) {
+          addColumnsPromises.push(new Promise((resolve, reject) => {
+            this.db.run("ALTER TABLE tasks ADD COLUMN repeat_until TEXT", (err) => {
+              if (err && !err.message.includes('duplicate column name')) {
+                reject(err);
+              } else {
+                console.log('repeat_until column added successfully');
+                resolve();
+              }
+            });
+          }));
+        }
+        
+        if (!hasParentTaskId) {
+          addColumnsPromises.push(new Promise((resolve, reject) => {
+            this.db.run("ALTER TABLE tasks ADD COLUMN parent_task_id INTEGER", (err) => {
+              if (err && !err.message.includes('duplicate column name')) {
+                reject(err);
+              } else {
+                console.log('parent_task_id column added successfully');
+                resolve();
+              }
+            });
+          }));
+        }
+        
+        Promise.all(addColumnsPromises).then(() => {
+          resolve();
+        }).catch(reject);
       });
     });
   }

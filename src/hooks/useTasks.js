@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import apiService from '../services/apiService'
+import recurringTaskService from '../services/recurringTaskService'
 
 export function useTasks() {
   const [tasks, setTasks] = useState([])
@@ -19,6 +20,14 @@ export function useTasks() {
         setLoading(true)
         const tasksData = await apiService.getTasks()
         setTasks(tasksData)
+        
+        // Auto-generate recurring tasks
+        const newRecurringTasks = await recurringTaskService.autoGenerateRecurringTasks(tasksData)
+        if (newRecurringTasks.length > 0) {
+          // Reload tasks to include the newly generated ones
+          const updatedTasks = await apiService.getTasks()
+          setTasks(updatedTasks)
+        }
       } catch (error) {
         console.error('Failed to load tasks:', error)
         setTasks([])
@@ -89,12 +98,26 @@ export function useTasks() {
     }
   }
 
+  const generateNextOccurrence = async (taskId) => {
+    if (!user) return
+    
+    try {
+      const newTask = await apiService.generateNextOccurrence(taskId)
+      setTasks(prev => [...prev, newTask])
+      return newTask
+    } catch (error) {
+      console.error('Failed to generate next occurrence:', error)
+      throw error
+    }
+  }
+
   return {
     tasks,
     loading,
     addTask,
     toggleTask,
     deleteTask,
-    updateTask
+    updateTask,
+    generateNextOccurrence
   }
 }
