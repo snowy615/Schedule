@@ -106,8 +106,12 @@
 }
 
 .task-form-fields .form-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
   color: #ccc;
   font-size: 0.85rem;
+  margin-bottom: 0.25rem;
 }
 
 .task-form-fields .form-group input,
@@ -120,6 +124,21 @@
 .task-form-fields .form-group input:focus,
 .task-form-fields .form-group textarea:focus,
 .task-form-fields .form-group select:focus {
+  border-color: #646cff;
+  box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.1);
+}
+
+.date-input {
+  background: #1a1a1a;
+  border: 1px solid #444;
+  color: #fff;
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.date-input:focus {
+  outline: none;
   border-color: #646cff;
   box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.1);
 }

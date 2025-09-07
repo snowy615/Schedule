@@ -157,7 +157,7 @@ router.delete('/:id', async (req, res) => {
 // Add a task to a plan
 router.post('/:id/tasks', async (req, res) => {
   try {
-    const { title, description, priority } = req.body;
+    const { title, description, priority, date } = req.body;
     
     // Validate required fields
     if (!title || typeof title !== 'string' || title.trim().length === 0) {
@@ -168,10 +168,18 @@ router.post('/:id/tasks', async (req, res) => {
       return res.status(400).json({ error: 'Priority must be an integer between 1 and 5' });
     }
     
+    if (date !== undefined) {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(date)) {
+        return res.status(400).json({ error: 'Date must be in YYYY-MM-DD format' });
+      }
+    }
+    
     const updatedPlan = await Plan.addTask(req.params.id, req.user.id, {
       title: title.trim(),
       description: description ? description.trim() : null,
-      priority: priority || 3
+      priority: priority || 3,
+      date: date
     });
     
     res.status(201).json({

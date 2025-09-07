@@ -11,7 +11,7 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
   const [editingTaskId, setEditingTaskId] = useState(null)
   const [editingTask, setEditingTask] = useState(null)
   const [showAddTask, setShowAddTask] = useState(false)
-  const [newTask, setNewTask] = useState({ title: '', description: '', priority: 3 })
+  const [newTask, setNewTask] = useState({ title: '', description: '', priority: 3, date: formatDateForAPI(new Date()) })
 
   const priorityOptions = [
     { value: 1, label: 'P1 - Urgent', color: '#dc2626' },
@@ -95,9 +95,10 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
       await onAddTask(plan.id, {
         title: newTask.title.trim(),
         description: newTask.description ? newTask.description.trim() : null,
-        priority: newTask.priority
+        priority: newTask.priority,
+        date: newTask.date
       })
-      setNewTask({ title: '', description: '', priority: 3 })
+      setNewTask({ title: '', description: '', priority: 3, date: formatDateForAPI(new Date()) })
       setShowAddTask(false)
     } catch (error) {
       console.error('Failed to add task:', error)
@@ -223,6 +224,18 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
                   className="task-description-input"
                   rows="2"
                 />
+                <div className="form-row">
+                  <label>
+                    <Calendar size={16} />
+                    Due Date:
+                  </label>
+                  <input
+                    type="date"
+                    value={newTask.date}
+                    onChange={(e) => setNewTask(prev => ({ ...prev, date: e.target.value }))}
+                    className="task-date-input"
+                  />
+                </div>
                 <div className="form-actions">
                   <button onClick={() => setShowAddTask(false)} className="cancel-button">
                     Cancel

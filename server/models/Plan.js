@@ -41,7 +41,7 @@ class Plan {
                 userId, 
                 task.title, 
                 task.description || null, 
-                date, 
+                task.date || date, // Use task's date if provided, otherwise plan date
                 planId, 
                 index,
                 task.priority || 3
@@ -460,7 +460,7 @@ class Plan {
             db.run(`
               INSERT INTO tasks (user_id, title, description, date, plan_id, plan_order, priority) 
               VALUES (?, ?, ?, ?, ?, ?, ?)
-            `, [userId, taskData.title, taskData.description, plan.date, planId, nextOrder, taskData.priority], function(taskErr) {
+            `, [userId, taskData.title, taskData.description, taskData.date || plan.date, planId, nextOrder, taskData.priority], function(taskErr) {
               if (taskErr) {
                 db.run('ROLLBACK');
                 reject(taskErr);

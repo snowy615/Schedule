@@ -44,7 +44,22 @@ function HomePage() {
   }
 
   const getPlansForDate = (date) => {
-    return plans.filter(plan => isSameDay(new Date(plan.date), date))
+    return plans.filter(plan => {
+      // If plan is completed, don't show it
+      if (plan.completed) return false
+      
+      // Show plan on the date of the current task
+      if (plan.tasks && plan.tasks.length > 0) {
+        const currentTaskIndex = plan.current_task_index || 0
+        const currentTask = plan.tasks[currentTaskIndex]
+        if (currentTask && currentTask.date) {
+          return isSameDay(new Date(currentTask.date), date)
+        }
+      }
+      
+      // Fallback to plan date if no current task date
+      return isSameDay(new Date(plan.date), date)
+    })
   }
 
   const handleAddTask = async (taskData) => {

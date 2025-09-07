@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
-import { X, Plus, Trash2 } from 'lucide-react'
+import { X, Plus, Trash2, Calendar } from 'lucide-react'
+import { formatDateForAPI } from '../utils/dateUtils'
 import './PlanModal.css'
 
 function PlanModal({ onClose, onSave, selectedDate }) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    tasks: [{ title: '', description: '', priority: 3 }]
+    tasks: [{ title: '', description: '', priority: 3, date: formatDateForAPI(selectedDate) }]
   })
 
   const priorityOptions = [
@@ -30,7 +31,7 @@ function PlanModal({ onClose, onSave, selectedDate }) {
       ...formData,
       tasks: validTasks
     })
-    setFormData({ title: '', description: '', tasks: [{ title: '', description: '', priority: 3 }] })
+    setFormData({ title: '', description: '', tasks: [{ title: '', description: '', priority: 3, date: formatDateForAPI(selectedDate) }] })
   }
 
   const handleChange = (field, value) => {
@@ -49,7 +50,7 @@ function PlanModal({ onClose, onSave, selectedDate }) {
   const addTask = () => {
     setFormData(prev => ({
       ...prev,
-      tasks: [...prev.tasks, { title: '', description: '', priority: 3 }]
+      tasks: [...prev.tasks, { title: '', description: '', priority: 3, date: formatDateForAPI(selectedDate) }]
     }))
   }
 
@@ -164,6 +165,20 @@ function PlanModal({ onClose, onSave, selectedDate }) {
                           </option>
                         ))}
                       </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor={`task-date-${index}`}>
+                        <Calendar size={16} />
+                        Due Date
+                      </label>
+                      <input
+                        id={`task-date-${index}`}
+                        type="date"
+                        value={task.date}
+                        onChange={(e) => handleTaskChange(index, 'date', e.target.value)}
+                        className="date-input"
+                      />
                     </div>
                   </div>
                 </div>
