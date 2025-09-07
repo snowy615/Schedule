@@ -40,3 +40,12 @@ export function getTomorrowDateString() {
   const day = String(tomorrow.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
+
+// Utility function to safely parse a date string (YYYY-MM-DD) without timezone shifts
+export function parseDateSafely(dateString) {
+  if (!dateString) return new Date()
+  
+  // Split the date string and create date using local timezone
+  const [year, month, day] = dateString.split('-').map(Number)
+  return new Date(year, month - 1, day) // month is 0-indexed
+}

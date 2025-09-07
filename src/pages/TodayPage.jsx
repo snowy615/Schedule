@@ -3,7 +3,7 @@ import { format, isToday } from 'date-fns'
 import { Plus, Clock } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import TaskModal from '../components/TaskModal'
-import { getTodayDateString, getTomorrowDateString } from '../utils/dateUtils'
+import { getTodayDateString, getTomorrowDateString, parseDateSafely } from '../utils/dateUtils'
 import { getPriorityStyles } from '../utils/priorityUtils'
 import { formatRepeatType, getRepeatIcon } from '../utils/repeatUtils'
 import './TodayPage.css'
@@ -14,7 +14,7 @@ function TodayPage() {
   const today = new Date()
 
   const todayTasks = tasks
-    .filter(task => isToday(new Date(task.date)))
+    .filter(task => isToday(parseDateSafely(task.date)))
     .sort((a, b) => {
       // Sort by start_time first, then by finish_time, then by creation time
       if (!a.start_time && !b.start_time) return 0

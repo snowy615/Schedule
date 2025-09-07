@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { X, CheckCircle, Circle, Edit2, Plus, Trash2, Save, Calendar } from 'lucide-react'
 import { getPriorityStyles } from '../utils/priorityUtils'
-import { formatDateForAPI } from '../utils/dateUtils'
+import { formatDateForAPI, parseDateSafely } from '../utils/dateUtils'
 import './PlanDetailModal.css'
 
 function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTask, onDeleteTask }) {
@@ -123,7 +123,7 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
         </div>
         
         <div className="modal-date">
-          <span>Date: {format(new Date(plan.date), 'EEEE, MMMM d, yyyy')}</span>
+          <span>Date: {format(parseDateSafely(plan.date), 'EEEE, MMMM d, yyyy')}</span>
         </div>
 
         <div className="plan-detail-content">
@@ -369,7 +369,7 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
                           {task.date !== plan.date && (
                             <div className="task-date-info">
                               <Calendar size={14} />
-                              <span>Due: {format(new Date(task.date), 'MMM d, yyyy')}</span>
+                              <span>Due: {format(parseDateSafely(task.date), 'MMM d, yyyy')}</span>
                             </div>
                           )}
                           {status === 'current' && (

@@ -6,7 +6,7 @@ import { usePlans } from '../hooks/usePlans'
 import TaskModal from '../components/TaskModal'
 import PlanModal from '../components/PlanModal'
 import PlanDetailModal from '../components/PlanDetailModal'
-import { formatDateForAPI, formatDateForAPIWithDelay } from '../utils/dateUtils'
+import { formatDateForAPI, formatDateForAPIWithDelay, parseDateSafely } from '../utils/dateUtils'
 import { getPriorityStyles } from '../utils/priorityUtils'
 import { formatRepeatType, getRepeatIcon } from '../utils/repeatUtils'
 import './HomePage.css'
@@ -39,7 +39,7 @@ function HomePage() {
   const getTasksForDate = (date) => {
     // Only return standalone tasks (not part of any plan)
     return tasks.filter(task => 
-      isSameDay(new Date(task.date), date) && !task.plan_id
+      isSameDay(parseDateSafely(task.date), date) && !task.plan_id
     )
   }
 
@@ -51,14 +51,19 @@ function HomePage() {
       // Show plan on the date of the current task
       if (plan.tasks && plan.tasks.length > 0) {
         const currentTaskIndex = plan.current_task_index || 0
+        // Ensure currentTaskIndex is within bounds
+        if (currentTaskIndex >= plan.tasks.length) {
+          // If current_task_index is out of bounds, use the last task or mark as completed
+          return false
+        }
         const currentTask = plan.tasks[currentTaskIndex]
         if (currentTask && currentTask.date) {
-          return isSameDay(new Date(currentTask.date), date)
+          return isSameDay(parseDateSafely(currentTask.date), date)
         }
       }
       
       // Fallback to plan date if no current task date
-      return isSameDay(new Date(plan.date), date)
+      return isSameDay(parseDateSafely(plan.date), date)
     })
   }
 
@@ -100,13 +105,33 @@ function HomePage() {
 
   const handleCompleteCurrentTask = async (planId) => {
     try {
-      await completeCurrentTask(planId)
+      const updatedPlan = await completeCurrentTask(planId)
+      
+      // If plan is not completed and has a next task, navigate to that task's date
+      if (updatedPlan && !updatedPlan.completed && updatedPlan.tasks && updatedPlan.tasks.length > 0) {
+        const currentTaskIndex = updatedPlan.current_task_index || 0
+        const nextTask = updatedPlan.tasks[currentTaskIndex]
+        
+        if (nextTask && nextTask.date) {
+          const nextTaskDate = parseDateSafely(nextTask.date)
+          // Navigate calendar to show the date of the next task
+          const nextTaskMonth = startOfMonth(nextTaskDate)
+          if (!isSameDay(startOfMonth(currentDate), nextTaskMonth)) {
+            setCurrentDate(nextTaskDate)
+          }
+          // Also select that date to highlight it
+          setSelectedDate(nextTaskDate)
+        }
+      }
+      
       // Refresh the selected plan if it's currently open
       if (selectedPlan && selectedPlan.id === planId) {
-        const updatedPlan = plans.find(p => p.id === planId)
-        if (updatedPlan) {
+        if (updatedPlan && !updatedPlan.completed) {
           const currentTask = await getCurrentTask(planId)
           setSelectedPlan({ ...updatedPlan, currentTask })
+        } else {
+          // Plan is completed, close the modal
+          setSelectedPlan(null)
         }
       }
     } catch (error) {

@@ -351,14 +351,20 @@ class Plan {
                 }
                 
                 const nextTaskIndex = plan.current_task_index + 1;
-                const isLastTask = nextTaskIndex >= countResult.total_tasks;
+                const totalTasks = countResult.total_tasks;
+                const isLastTask = nextTaskIndex >= totalTasks;
+                
+                // If this was the last task, mark plan as completed
+                // Otherwise, move to next task
+                const newTaskIndex = isLastTask ? totalTasks : nextTaskIndex;
+                const planCompleted = isLastTask ? 1 : 0;
                 
                 // Update plan
                 db.run(`
                   UPDATE plans 
                   SET current_task_index = ?, completed = ?, updated_at = CURRENT_TIMESTAMP 
                   WHERE id = ?
-                `, [nextTaskIndex, isLastTask ? 1 : 0, planId], (planUpdateErr) => {
+                `, [newTaskIndex, planCompleted, planId], (planUpdateErr) => {
                   if (planUpdateErr) {
                     db.run('ROLLBACK');
                     reject(planUpdateErr);
