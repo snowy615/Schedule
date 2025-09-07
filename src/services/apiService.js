@@ -132,6 +132,48 @@ class ApiService {
     });
     return data.task;
   }
+
+  // Plan methods
+  async getPlans() {
+    const data = await this.apiCall('/plans');
+    return data.plans;
+  }
+
+  async getPlansByDate(date) {
+    const data = await this.apiCall(`/plans/date/${date}`);
+    return data.plans;
+  }
+
+  async createPlan(planData) {
+    const data = await this.apiCall('/plans', {
+      method: 'POST',
+      body: JSON.stringify(planData),
+    });
+    return data.plan;
+  }
+
+  async getPlan(id) {
+    const data = await this.apiCall(`/plans/${id}`);
+    return data.plan;
+  }
+
+  async getCurrentTask(planId) {
+    const data = await this.apiCall(`/plans/${planId}/current-task`);
+    return data.task;
+  }
+
+  async completeCurrentTask(planId) {
+    const data = await this.apiCall(`/plans/${planId}/complete-task`, {
+      method: 'PATCH',
+    });
+    return data.plan;
+  }
+
+  async deletePlan(id) {
+    return this.apiCall(`/plans/${id}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export default new ApiService();

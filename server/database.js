@@ -58,11 +58,14 @@ class Database {
             repeat_interval INTEGER DEFAULT 1,
             repeat_until TEXT,
             parent_task_id INTEGER,
+            plan_id INTEGER,
+            plan_order INTEGER,
             completed BOOLEAN DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-            FOREIGN KEY (parent_task_id) REFERENCES tasks (id) ON DELETE CASCADE
+            FOREIGN KEY (parent_task_id) REFERENCES tasks (id) ON DELETE CASCADE,
+            FOREIGN KEY (plan_id) REFERENCES plans (id) ON DELETE CASCADE
           )
         `, (err) => {
           if (err) {
@@ -71,17 +74,42 @@ class Database {
             return;
           }
           
-          // Migrate existing data from 'time' column to 'start_time'
-          this.migrateTimeColumn().then(() => {
-            // Add priority column to existing tables if needed
-            return this.addPriorityColumn();
-          }).then(() => {
-            // Add repetition columns to existing tables if needed
-            return this.addRepetitionColumns();
-          }).then(() => {
-            console.log('Database tables created successfully');
-            resolve();
-          }).catch(reject);
+          // Create plans table
+          this.db.run(`
+            CREATE TABLE IF NOT EXISTS plans (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id INTEGER NOT NULL,
+              title TEXT NOT NULL,
+              description TEXT,
+              date TEXT NOT NULL,
+              completed BOOLEAN DEFAULT 0,
+              current_task_index INTEGER DEFAULT 0,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            )
+          `, (err) => {
+            if (err) {
+              console.error('Error creating plans table:', err);
+              reject(err);
+              return;
+            }
+            
+            // Migrate existing data from 'time' column to 'start_time'
+            this.migrateTimeColumn().then(() => {
+              // Add priority column to existing tables if needed
+              return this.addPriorityColumn();
+            }).then(() => {
+              // Add repetition columns to existing tables if needed
+              return this.addRepetitionColumns();
+            }).then(() => {
+              // Add plan columns to existing tables if needed
+              return this.addPlanColumns();
+            }).then(() => {
+              console.log('Database tables created successfully');
+              resolve();
+            }).catch(reject);
+          });
         });
       });
     });
@@ -232,6 +260,54 @@ class Database {
                 reject(err);
               } else {
                 console.log('parent_task_id column added successfully');
+                resolve();
+              }
+            });
+          }));
+        }
+        
+        Promise.all(addColumnsPromises).then(() => {
+          resolve();
+        }).catch(reject);
+      });
+    });
+  }
+
+  // Add plan columns to existing tasks table if needed
+  async addPlanColumns() {
+    return new Promise((resolve, reject) => {
+      // Check if plan columns exist
+      this.db.all("PRAGMA table_info(tasks)", (err, columns) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        const hasPlanId = columns.some(col => col.name === 'plan_id');
+        const hasPlanOrder = columns.some(col => col.name === 'plan_order');
+        
+        const addColumnsPromises = [];
+        
+        if (!hasPlanId) {
+          addColumnsPromises.push(new Promise((resolve, reject) => {
+            this.db.run("ALTER TABLE tasks ADD COLUMN plan_id INTEGER", (err) => {
+              if (err && !err.message.includes('duplicate column name')) {
+                reject(err);
+              } else {
+                console.log('plan_id column added successfully');
+                resolve();
+              }
+            });
+          }));
+        }
+        
+        if (!hasPlanOrder) {
+          addColumnsPromises.push(new Promise((resolve, reject) => {
+            this.db.run("ALTER TABLE tasks ADD COLUMN plan_order INTEGER", (err) => {
+              if (err && !err.message.includes('duplicate column name')) {
+                reject(err);
+              } else {
+                console.log('plan_order column added successfully');
                 resolve();
               }
             });

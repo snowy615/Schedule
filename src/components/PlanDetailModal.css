@@ -1,0 +1,321 @@
+/* Plan Detail Modal Styles */
+.plan-detail-modal {
+  max-width: 600px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.plan-detail-content {
+  padding: 2rem;
+}
+
+.plan-description {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: rgba(100, 108, 255, 0.1);
+  border-radius: 8px;
+  border-left: 4px solid #646cff;
+}
+
+.plan-description p {
+  margin: 0;
+  color: #ccc;
+  line-height: 1.5;
+}
+
+/* Progress Section */
+.plan-progress {
+  margin-bottom: 2rem;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.progress-header h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1.2rem;
+}
+
+.progress-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.completed-count {
+  color: #22c55e;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.separator {
+  color: #666;
+}
+
+.total-count {
+  color: #888;
+  font-weight: 600;
+}
+
+.progress-label {
+  color: #888;
+  margin-left: 0.5rem;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #333;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+/* Current Task Section */
+.current-task-section {
+  margin-bottom: 2rem;
+}
+
+.current-task-section h3 {
+  margin: 0 0 1rem 0;
+  color: #ffffff;
+  font-size: 1.2rem;
+}
+
+.current-task-card {
+  background: #2a2a2a;
+  border: 1px solid #646cff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  position: relative;
+}
+
+.current-task-card .task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.current-task-card .task-header h4 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1.1rem;
+  flex: 1;
+}
+
+.task-badges {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.priority-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.current-task-card .task-description {
+  margin: 0 0 1.5rem 0;
+  color: #ccc;
+  line-height: 1.5;
+}
+
+.complete-task-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #22c55e;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  width: 100%;
+  justify-content: center;
+}
+
+.complete-task-button:hover {
+  background: #16a34a;
+}
+
+/* All Tasks Section */
+.all-tasks-section {
+  margin-bottom: 2rem;
+}
+
+.all-tasks-section h3 {
+  margin: 0 0 1.5rem 0;
+  color: #ffffff;
+  font-size: 1.2rem;
+}
+
+.tasks-timeline {
+  position: relative;
+}
+
+.tasks-timeline::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #333;
+}
+
+.timeline-task {
+  position: relative;
+  margin-bottom: 1.5rem;
+  padding-left: 3rem;
+  display: flex;
+  align-items: flex-start;
+}
+
+.timeline-marker {
+  position: absolute;
+  left: 0;
+  top: 0.5rem;
+  z-index: 1;
+  background: #1a1a1a;
+  border-radius: 50%;
+  padding: 2px;
+}
+
+.completed-icon {
+  color: #22c55e;
+}
+
+.current-icon {
+  color: #646cff;
+}
+
+.pending-icon {
+  color: #666;
+}
+
+.timeline-content {
+  flex: 1;
+}
+
+.timeline-task-card {
+  background: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 1rem;
+  transition: all 0.2s;
+}
+
+.timeline-task.current .timeline-task-card {
+  border-color: #646cff;
+  box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.1);
+}
+
+.timeline-task.completed .timeline-task-card {
+  border-color: #22c55e;
+  opacity: 0.8;
+}
+
+.timeline-task-card .task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.timeline-task-card .task-header h5 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1rem;
+  flex: 1;
+}
+
+.timeline-task-card .task-description {
+  margin: 0;
+  color: #ccc;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.completed-text {
+  text-decoration: line-through;
+  color: #888 !important;
+}
+
+.current-task-indicator {
+  margin-top: 0.5rem;
+  color: #646cff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Completion Celebration */
+.completion-celebration {
+  text-align: center;
+  padding: 2rem;
+  background: rgba(34, 197, 94, 0.1);
+  border-radius: 12px;
+  border: 1px solid #22c55e;
+}
+
+.celebration-content h3 {
+  margin: 0 0 1rem 0;
+  color: #22c55e;
+  font-size: 1.5rem;
+}
+
+.celebration-content p {
+  margin: 0;
+  color: #ccc;
+  font-size: 1rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .plan-detail-modal {
+    max-width: none;
+    margin: 1rem;
+    max-height: 90vh;
+  }
+  
+  .plan-detail-content {
+    padding: 1.5rem;
+  }
+  
+  .progress-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .timeline-task {
+    padding-left: 2.5rem;
+  }
+  
+  .timeline-task-card {
+    padding: 0.75rem;
+  }
+  
+  .current-task-card {
+    padding: 1rem;
+  }
+}

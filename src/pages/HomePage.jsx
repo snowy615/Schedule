@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns'
-import { Plus, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, FolderPlus } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
+import { usePlans } from '../hooks/usePlans'
 import TaskModal from '../components/TaskModal'
+import PlanModal from '../components/PlanModal'
+import PlanDetailModal from '../components/PlanDetailModal'
 import { formatDateForAPI, formatDateForAPIWithDelay } from '../utils/dateUtils'
 import { getPriorityStyles } from '../utils/priorityUtils'
 import { formatRepeatType, getRepeatIcon } from '../utils/repeatUtils'
@@ -12,9 +15,12 @@ function HomePage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [showTaskModal, setShowTaskModal] = useState(false)
+  const [showPlanModal, setShowPlanModal] = useState(false)
   const [draggedTask, setDraggedTask] = useState(null)
   const [dragOverDate, setDragOverDate] = useState(null)
+  const [selectedPlan, setSelectedPlan] = useState(null)
   const { tasks, loading, addTask, toggleTask, deleteTask, updateTask } = useTasks()
+  const { plans, addPlan, deletePlan, completeCurrentTask, getCurrentTask } = usePlans()
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
@@ -31,7 +37,14 @@ function HomePage() {
   }
 
   const getTasksForDate = (date) => {
-    return tasks.filter(task => isSameDay(new Date(task.date), date))
+    // Only return standalone tasks (not part of any plan)
+    return tasks.filter(task => 
+      isSameDay(new Date(task.date), date) && !task.plan_id
+    )
+  }
+
+  const getPlansForDate = (date) => {
+    return plans.filter(plan => isSameDay(new Date(plan.date), date))
   }
 
   const handleAddTask = async (taskData) => {
@@ -44,6 +57,45 @@ function HomePage() {
     } catch (error) {
       console.error('Failed to add task:', error)
       // Could add error handling UI here
+    }
+  }
+
+  const handleAddPlan = async (planData) => {
+    try {
+      await addPlan({
+        ...planData,
+        date: formatDateForAPIWithDelay(selectedDate) // Add 24 hours to selected date
+      })
+      setShowPlanModal(false)
+    } catch (error) {
+      console.error('Failed to add plan:', error)
+      // Could add error handling UI here
+    }
+  }
+
+  const handlePlanClick = async (plan) => {
+    try {
+      // Get the current task for this plan
+      const currentTask = await getCurrentTask(plan.id)
+      setSelectedPlan({ ...plan, currentTask })
+    } catch (error) {
+      console.error('Failed to get plan details:', error)
+    }
+  }
+
+  const handleCompleteCurrentTask = async (planId) => {
+    try {
+      await completeCurrentTask(planId)
+      // Refresh the selected plan if it's currently open
+      if (selectedPlan && selectedPlan.id === planId) {
+        const updatedPlan = plans.find(p => p.id === planId)
+        if (updatedPlan) {
+          const currentTask = await getCurrentTask(planId)
+          setSelectedPlan({ ...updatedPlan, currentTask })
+        }
+      }
+    } catch (error) {
+      console.error('Failed to complete current task:', error)
     }
   }
 
@@ -154,13 +206,22 @@ function HomePage() {
             <ChevronRight size={20} />
           </button>
         </div>
-        <button 
-          onClick={() => setShowTaskModal(true)}
-          className="add-task-button"
-        >
-          <Plus size={20} />
-          Add Task
-        </button>
+        <div className="header-buttons">
+          <button 
+            onClick={() => setShowTaskModal(true)}
+            className="add-task-button"
+          >
+            <Plus size={20} />
+            Add Task
+          </button>
+          <button 
+            onClick={() => setShowPlanModal(true)}
+            className="add-plan-button"
+          >
+            <FolderPlus size={20} />
+            Create Plan
+          </button>
+        </div>
       </div>
 
       <div className="calendar-grid">
@@ -173,6 +234,7 @@ function HomePage() {
         <div className="days-grid">
           {calendarDays.map(day => {
             const dayTasks = getTasksForDate(day)
+            const dayPlans = getPlansForDate(day)
             const isSelected = isSameDay(day, selectedDate)
             const isTodayDate = isToday(day)
             const isCurrentMonth = day.getMonth() === currentDate.getMonth()
@@ -195,8 +257,27 @@ function HomePage() {
                 onDrop={(e) => handleDrop(e, day)}
               >
                 <span className="day-number">{format(day, 'd')}</span>
-                <div className="day-tasks">
-                  {dayTasks.slice(0, 3).map(task => {
+                <div className="day-items">
+                  {/* Render Plans */}
+                  {dayPlans.slice(0, 2).map(plan => (
+                    <div
+                      key={`plan-${plan.id}`}
+                      className={`plan-indicator ${
+                        plan.completed ? 'completed' : ''
+                      }`}
+                      title={`📋 ${plan.title} (Plan)`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handlePlanClick(plan)
+                      }}
+                    >
+                      📋 {plan.title.substring(0, 15)}
+                      {plan.title.length > 15 ? '...' : ''}
+                    </div>
+                  ))}
+                  
+                  {/* Render Tasks */}
+                  {dayTasks.slice(0, 3 - dayPlans.length).map(task => {
                     const priorityStyles = getPriorityStyles(task.priority || 3)
                     const isDragging = draggedTask && draggedTask.id === task.id
                     return (
@@ -222,8 +303,9 @@ function HomePage() {
                       </div>
                     )
                   })}
-                  {dayTasks.length > 3 && (
-                    <div className="more-tasks">+{dayTasks.length - 3} more</div>
+                  
+                  {(dayTasks.length + dayPlans.length) > 3 && (
+                    <div className="more-items">+{(dayTasks.length + dayPlans.length) - 3} more</div>
                   )}
                 </div>
               </div>
@@ -237,78 +319,113 @@ function HomePage() {
         {loading ? (
           <div className="loading-container">
             <div className="loading-spinner"></div>
-            <p>Loading tasks...</p>
+            <p>Loading items...</p>
           </div>
         ) : (
-          <div className="tasks-list">
-            {getTasksForDate(selectedDate).length === 0 ? (
-              <p className="no-tasks">No tasks for this day</p>
+          <div className="items-list">
+            {getPlansForDate(selectedDate).length === 0 && getTasksForDate(selectedDate).length === 0 ? (
+              <p className="no-items">No tasks or plans for this day</p>
             ) : (
-              getTasksForDate(selectedDate).map(task => {
-                const priorityStyles = getPriorityStyles(task.priority || 3)
-                const isDragging = draggedTask && draggedTask.id === task.id
-                return (
-                  <div key={task.id} className={`task-item ${
-                    task.completed ? 'completed' : ''
-                  } ${
-                    isDragging ? 'dragging' : ''
-                  }`}
-                       style={{
-                         borderLeft: `4px solid ${priorityStyles.color}`,
-                         backgroundColor: priorityStyles.backgroundColor,
-                         opacity: isDragging ? 0.5 : 1
-                       }}
-                       draggable
-                       onDragStart={(e) => handleDragStart(e, task)}
-                       onDragEnd={handleDragEnd}
+              <>
+                {/* Render Plans */}
+                {getPlansForDate(selectedDate).map(plan => (
+                  <div 
+                    key={`plan-${plan.id}`} 
+                    className={`plan-item ${
+                      plan.completed ? 'completed' : ''
+                    }`}
+                    onClick={() => handlePlanClick(plan)}
                   >
-                    <input
-                      type="checkbox"
-                      checked={task.completed}
-                      onChange={() => toggleTask(task.id)}
-                    />
-                    <div className="task-content">
-                      <div className="task-header-info">
-                        <h4>{getRepeatIcon(task.repeat_type)} {task.title}</h4>
-                        <div className="task-badges">
-                          <span className="priority-badge" style={{ color: priorityStyles.color }}>
-                            P{task.priority || 3}
+                    <div className="plan-content">
+                      <div className="plan-header-info">
+                        <h4>📋 {plan.title}</h4>
+                        <div className="plan-badges">
+                          <span className="plan-badge">
+                            Plan ({plan.completed ? 'Complete' : 'In Progress'})
                           </span>
-                          {task.repeat_type && task.repeat_type !== 'none' && (
-                            <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
-                              🔄
-                            </span>
-                          )}
                         </div>
                       </div>
-                      {task.description && <p>{task.description}</p>}
-                      {task.repeat_type && task.repeat_type !== 'none' && (
-                        <div className="repeat-info">
-                          <small>Repeats: {formatRepeatType(task.repeat_type)}
-                            {task.repeat_until && ` until ${new Date(task.repeat_until).toLocaleDateString()}`}
-                          </small>
-                        </div>
-                      )}
-                      {(task.start_time || task.finish_time) && (
-                        <span className="task-time">
-                          {task.start_time && task.finish_time 
-                            ? `${task.start_time} - ${task.finish_time}`
-                            : task.start_time 
-                              ? `Start: ${task.start_time}`
-                              : `End: ${task.finish_time}`
-                          }
-                        </span>
-                      )}
+                      {plan.description && <p>{plan.description}</p>}
                     </div>
                     <button 
-                      onClick={() => deleteTask(task.id)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        deletePlan(plan.id)
+                      }}
                       className="delete-button"
                     >
                       ×
                     </button>
                   </div>
-                )
-              })
+                ))}
+                
+                {/* Render Tasks */}
+                {getTasksForDate(selectedDate).map(task => {
+                  const priorityStyles = getPriorityStyles(task.priority || 3)
+                  const isDragging = draggedTask && draggedTask.id === task.id
+                  return (
+                    <div key={task.id} className={`task-item ${
+                      task.completed ? 'completed' : ''
+                    } ${
+                      isDragging ? 'dragging' : ''
+                    }`}
+                         style={{
+                           borderLeft: `4px solid ${priorityStyles.color}`,
+                           backgroundColor: priorityStyles.backgroundColor,
+                           opacity: isDragging ? 0.5 : 1
+                         }}
+                         draggable
+                         onDragStart={(e) => handleDragStart(e, task)}
+                         onDragEnd={handleDragEnd}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={task.completed}
+                        onChange={() => toggleTask(task.id)}
+                      />
+                      <div className="task-content">
+                        <div className="task-header-info">
+                          <h4>{getRepeatIcon(task.repeat_type)} {task.title}</h4>
+                          <div className="task-badges">
+                            <span className="priority-badge" style={{ color: priorityStyles.color }}>
+                              P{task.priority || 3}
+                            </span>
+                            {task.repeat_type && task.repeat_type !== 'none' && (
+                              <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
+                                🔄
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {task.description && <p>{task.description}</p>}
+                        {task.repeat_type && task.repeat_type !== 'none' && (
+                          <div className="repeat-info">
+                            <small>Repeats: {formatRepeatType(task.repeat_type)}
+                              {task.repeat_until && ` until ${new Date(task.repeat_until).toLocaleDateString()}`}
+                            </small>
+                          </div>
+                        )}
+                        {(task.start_time || task.finish_time) && (
+                          <span className="task-time">
+                            {task.start_time && task.finish_time 
+                              ? `${task.start_time} - ${task.finish_time}`
+                              : task.start_time 
+                                ? `Start: ${task.start_time}`
+                                : `End: ${task.finish_time}`
+                            }
+                          </span>
+                        )}
+                      </div>
+                      <button 
+                        onClick={() => deleteTask(task.id)}
+                        className="delete-button"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )
+                })}
+              </>
             )}
           </div>
         )}
@@ -319,6 +436,22 @@ function HomePage() {
           onClose={() => setShowTaskModal(false)}
           onSave={handleAddTask}
           selectedDate={selectedDate}
+        />
+      )}
+
+      {showPlanModal && (
+        <PlanModal
+          onClose={() => setShowPlanModal(false)}
+          onSave={handleAddPlan}
+          selectedDate={selectedDate}
+        />
+      )}
+
+      {selectedPlan && (
+        <PlanDetailModal
+          plan={selectedPlan}
+          onClose={() => setSelectedPlan(null)}
+          onCompleteTask={() => handleCompleteCurrentTask(selectedPlan.id)}
         />
       )}
     </div>
