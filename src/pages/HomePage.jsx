@@ -10,6 +10,7 @@ import { formatDateForAPI, formatDateForAPIWithDelay, parseDateSafely } from '..
 import { getPriorityStyles } from '../utils/priorityUtils'
 import { formatRepeatType, getRepeatIcon } from '../utils/repeatUtils'
 import { getActivePlans } from '../utils/planUtils'
+import { handleICSFileUpload } from '../utils/icsUtils'
 import './HomePage.css'
 
 function HomePage() {
@@ -330,6 +331,29 @@ function HomePage() {
     setDraggedTask(null)
   }
 
+  const handleICSImport = async (event) => {
+    const file = event.target.files[0];
+    if (!file || !file.name.endsWith('.ics')) {
+      alert('Please select a valid .ics file');
+      return;
+    }
+
+    try {
+      const importedTasks = await handleICSFileUpload(file);
+      
+      // Add each imported task
+      for (const task of importedTasks) {
+        await addTask(task);
+      }
+      
+      alert(`Successfully imported ${importedTasks.length} events from ${file.name}`);
+      event.target.value = ''; // Reset file input
+    } catch (error) {
+      console.error('Failed to import ICS file:', error);
+      alert('Failed to import ICS file. Please check the console for details.');
+    }
+  };
+
   return (
     <div className="home-page">
       <div className="calendar-header">
@@ -343,6 +367,16 @@ function HomePage() {
           </button>
         </div>
         <div className="header-buttons">
+          <input 
+            type="file" 
+            accept=".ics" 
+            onChange={handleICSImport} 
+            style={{ display: 'none' }} 
+            id="ics-file-input-home" 
+          />
+          <label htmlFor="ics-file-input-home" className="import-ics-button">
+            Import ICS
+          </label>
           <button 
             onClick={() => setShowTaskModal(true)}
             className="add-task-button"

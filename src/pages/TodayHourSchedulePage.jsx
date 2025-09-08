@@ -6,6 +6,7 @@ import TaskModal from '../components/TaskModal'
 import { getTodayDateString, getTomorrowDateString, parseDateSafely } from '../utils/dateUtils'
 import { getPriorityStyles } from '../utils/priorityUtils'
 import { formatRepeatType, getRepeatIcon } from '../utils/repeatUtils'
+import { handleICSFileUpload } from '../utils/icsUtils'
 import './TodayHourSchedulePage.css'
 
 function TodayHourSchedulePage() {
@@ -269,6 +270,29 @@ function TodayHourSchedulePage() {
     setHoveredTask(null)
   }
 
+  const handleICSImport = async (event) => {
+    const file = event.target.files[0];
+    if (!file || !file.name.endsWith('.ics')) {
+      alert('Please select a valid .ics file');
+      return;
+    }
+
+    try {
+      const importedTasks = await handleICSFileUpload(file);
+      
+      // Add each imported task
+      for (const task of importedTasks) {
+        await addTask(task);
+      }
+      
+      alert(`Successfully imported ${importedTasks.length} events from ${file.name}`);
+      event.target.value = ''; // Reset file input
+    } catch (error) {
+      console.error('Failed to import ICS file:', error);
+      alert('Failed to import ICS file. Please check the console for details.');
+    }
+  };
+
   return (
     <div className="today-hour-schedule-page">
       <div className="hour-schedule-container">
@@ -277,13 +301,25 @@ function TodayHourSchedulePage() {
             <h1>Today's Hour Schedule</h1>
             <p className="current-date">{format(today, 'EEEE, MMMM d, yyyy')}</p>
           </div>
-          <button 
-            onClick={() => setShowTaskModal(true)}
-            className="add-task-button"
-          >
-            <Plus size={20} />
-            Add Task
-          </button>
+          <div className="header-actions">
+            <input 
+              type="file" 
+              accept=".ics" 
+              onChange={handleICSImport} 
+              style={{ display: 'none' }} 
+              id="ics-file-input-hour" 
+            />
+            <label htmlFor="ics-file-input-hour" className="import-ics-button">
+              Import ICS
+            </label>
+            <button 
+              onClick={() => setShowTaskModal(true)}
+              className="add-task-button"
+            >
+              <Plus size={20} />
+              Add Task
+            </button>
+          </div>
         </div>
 
         <div className="hour-schedule-grid">

@@ -606,6 +606,24 @@
   background: #15803d;
 }
 
+.import-ics-button {
+  display: inline-block;
+  background: #2a2a2a;
+  color: #ffffff;
+  border: 1px solid #444;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+  margin-right: 1rem;
+}
+
+.import-ics-button:hover {
+  background: #3a3a3a;
+  border-color: #646cff;
+}
+
 /* Plan Styles */
 .plan-indicator {
   background: rgba(22, 163, 74, 0.2);

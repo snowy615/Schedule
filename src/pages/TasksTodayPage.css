@@ -1,40 +1,58 @@
+/* Tasks Today Page Styles */
 .tasks-today-page {
-  max-width: 800px;
-  margin: 0 auto;
+  min-height: 100vh;
+  background: #1a1a1a;
+  padding: 1rem;
 }
 
-.today-header {
+.page-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: 2rem;
-  flex-wrap: wrap;
+  padding: 1rem 0;
+  border-bottom: 1px solid #333;
+}
+
+.page-header h1 {
+  color: #ffffff;
+  font-size: 2rem;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
   gap: 1rem;
 }
 
-.date-info h1 {
-  margin: 0 0 0.5rem 0;
+.import-ics-button {
+  display: inline-block;
+  background: #2a2a2a;
   color: #ffffff;
-  font-size: 2.5rem;
-  font-weight: 700;
+  border: 1px solid #444;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+  margin-right: 1rem;
 }
 
-.current-date {
-  margin: 0;
-  color: #888;
-  font-size: 1.1rem;
+.import-ics-button:hover {
+  background: #3a3a3a;
+  border-color: #646cff;
 }
 
 .add-task-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   background: #646cff;
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
   font-weight: 500;
   transition: background-color 0.2s;
 }
@@ -43,91 +61,22 @@
   background: #535bf2;
 }
 
-.progress-section {
-  background: #1a1a1a;
-  border-radius: 12px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-  border: 1px solid #333;
-}
-
-.progress-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
-  margin-bottom: 1.5rem;
-}
-
-.stat {
-  text-align: center;
-}
-
-.stat-number {
-  display: block;
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #646cff;
-  margin-bottom: 0.5rem;
-}
-
-.stat-label {
-  color: #888;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.progress-bar {
-  background: #333;
-  border-radius: 6px;
-  height: 8px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  background: linear-gradient(90deg, #646cff, #535bf2);
-  height: 100%;
-  transition: width 0.3s ease;
-  border-radius: 6px;
-}
-
-.tasks-timeline {
-  background: #1a1a1a;
-  border-radius: 12px;
-  padding: 2rem;
-  border: 1px solid #333;
-}
-
-.no-tasks {
-  text-align: center;
-  padding: 4rem 2rem;
-  color: #888;
-}
-
-.no-tasks svg {
-  margin-bottom: 1rem;
-  opacity: 0.5;
-}
-
-.no-tasks h3 {
-  margin: 0 0 0.5rem 0;
-  color: #666;
-  font-size: 1.5rem;
-}
-
-.no-tasks p {
-  margin: 0;
-  font-size: 1rem;
+.timeline-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 0;
+  position: relative;
 }
 
 .timeline {
   position: relative;
+  padding-left: 2rem;
 }
 
 .timeline::before {
   content: '';
   position: absolute;
-  left: 1rem;
+  left: 2rem;
   top: 0;
   bottom: 0;
   width: 2px;
@@ -137,69 +86,92 @@
 .timeline-item {
   position: relative;
   margin-bottom: 2rem;
-  padding-left: 3rem;
+  padding-left: 2rem;
 }
 
 .timeline-marker {
   position: absolute;
-  left: 0.5rem;
-  top: 1rem;
-  width: 1rem;
-  height: 1rem;
+  left: -9px;
+  top: 0;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: #646cff;
-  border: 3px solid #1a1a1a;
-  z-index: 1;
-}
-
-.timeline-item.completed .timeline-marker {
-  background: #22c55e;
+  border: 2px solid #1a1a1a;
 }
 
 .timeline-content {
-  margin-left: 1rem;
-}
-
-.task-card {
   background: #2a2a2a;
   border-radius: 8px;
   padding: 1.5rem;
   border: 1px solid #333;
-  transition: all 0.2s;
 }
 
-.task-card:hover {
-  border-color: #646cff;
-  transform: translateY(-1px);
-}
-
-.timeline-item.completed .task-card {
-  background: #1e2a1e;
-  border-color: #22c55e;
-  opacity: 0.8;
+.task-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .task-header {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
-  margin-bottom: 1rem;
 }
 
 .task-checkbox {
   margin-top: 0.25rem;
-  width: 1.2rem;
-  height: 1.2rem;
-  cursor: pointer;
+  accent-color: #646cff;
+  width: 18px;
+  height: 18px;
 }
 
-.task-actions {
+.task-title-section {
+  flex: 1;
+}
+
+.task-title {
+  margin: 0 0 0.5rem 0;
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.edit-button {
+.overdue-badge {
+  background: #ef4444;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.task-badges {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.priority-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.repeat-badge {
+  font-size: 1rem;
+}
+
+.task-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.edit-button, .delete-button {
   background: none;
   border: none;
   color: #888;
@@ -217,135 +189,51 @@
   color: #646cff;
 }
 
-.delete-button {
-  background: none;
-  border: none;
-  color: #888;
-  cursor: pointer;
-  font-size: 1.2rem;
-  padding: 0.25rem;
-  border-radius: 4px;
-  line-height: 1;
-  transition: all 0.2s;
-}
-
 .delete-button:hover {
   background: rgba(255, 107, 107, 0.1);
   color: #ff6b6b;
 }
 
 .task-description {
-  margin: 0 0 1rem 0;
+  margin: 0;
   color: #ccc;
   line-height: 1.5;
+}
+
+.task-attachments {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 1rem;
+  margin: 0.5rem 0;
+}
+
+.task-attachments h4 {
+  margin: 0 0 0.5rem 0;
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+.attachments-content {
+  margin: 0;
+  color: #ccc;
+  font-family: monospace;
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
 .task-time {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #646cff;
-  font-size: 0.9rem;
-  background: rgba(100, 108, 255, 0.1);
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  width: fit-content;
-}
-
-.task-attachments {
-  background: rgba(100, 108, 255, 0.1);
-  border-radius: 6px;
-  padding: 0.75rem;
-  margin: 0.75rem 0;
-  border-left: 3px solid #646cff;
-}
-
-.task-attachments h4 {
-  margin: 0 0 0.5rem 0;
-  color: #646cff;
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-
-.attachments-content {
-  margin: 0;
-  color: #ccc;
-  font-size: 0.85rem;
-  white-space: pre-wrap;
-  font-family: inherit;
-  line-height: 1.4;
-}
-
-.timeline-separator {
-  position: relative;
-  margin: 3rem 0;
-  text-align: center;
-}
-
-.timeline-separator::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 1px;
-  background: #333;
-}
-
-.timeline-separator span {
-  background: #1a1a1a;
   color: #888;
-  padding: 0 1rem;
   font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
-@media (max-width: 768px) {
-  .today-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .date-info h1 {
-    font-size: 2rem;
-  }
-  
-  .progress-stats {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-  }
-  
-  .stat-number {
-    font-size: 2rem;
-  }
-  
-  .tasks-timeline {
-    padding: 1rem;
-  }
-  
-  .timeline-item {
-    padding-left: 2.5rem;
-  }
-  
-  .task-card {
-    padding: 1rem;
-  }
-}
-
-/* Priority Styles */
-.task-title-section {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex: 1;
-}
-
-.task-title {
-  margin: 0;
-  color: #ffffff;
-  font-size: 1.2rem;
-  font-weight: 600;
+.overdue-date {
+  margin-left: auto;
+  color: #ef4444;
+  font-weight: 500;
 }
 
 .timeline-item.completed .task-title {
@@ -353,105 +241,104 @@
   color: #888;
 }
 
-.task-badges {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.timeline-item.completed .task-description {
+  color: #666;
 }
 
-.priority-badge {
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 0.2rem 0.4rem;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid currentColor;
-  opacity: 0.8;
-  white-space: nowrap;
+.timeline-item.overdue .task-title {
+  color: #ff6b6b;
 }
 
-.repeat-badge {
-  font-size: 0.7rem;
-  padding: 0.15rem 0.3rem;
-  border-radius: 50%;
-  background: rgba(100, 108, 255, 0.2);
-  border: 1px solid #646cff;
-  color: #646cff;
-  cursor: help;
-  white-space: nowrap;
+.timeline-item.pending .timeline-marker {
+  background: #646cff;
 }
 
-.timeline-item {
-  border-left-width: 4px;
-  transition: all 0.2s;
-}
-
-.timeline-marker {
-  transition: all 0.2s;
-}
-
-/* Overdue Task Styles */
-.timeline-item.overdue .task-card {
-  background: #2a1a1a;
-  border-color: #ff6b6b;
+.timeline-item.completed .timeline-marker {
+  background: #22c55e;
 }
 
 .timeline-item.overdue .timeline-marker {
-  background: #ff6b6b;
+  background: #ef4444;
 }
 
-.overdue-badge {
-  background: #ff6b6b;
-  color: white;
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 0.2rem 0.4rem;
-  border-radius: 4px;
-  margin-right: 0.5rem;
-}
-
-.overdue-date {
-  margin-left: auto;
-  color: #ff6b6b;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.timeline-separator {
-  position: relative;
-  margin: 3rem 0;
+.no-tasks {
   text-align: center;
+  color: #666;
+  font-style: italic;
+  padding: 2rem;
 }
 
-.timeline-separator::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 1px;
-  background: #333;
-}
-
-.timeline-separator span {
-  background: #1a1a1a;
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
   color: #888;
-  padding: 0 1rem;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  position: relative;
-  display: inline-block;
 }
 
-.overdue-separator {
-  margin-top: 0;
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #333;
+  border-top: 3px solid #646cff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
 }
 
-.overdue-separator::before {
-  background: #ff6b6b;
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-.overdue-separator span {
-  color: #ff6b6b;
+@media (max-width: 768px) {
+  .tasks-today-page {
+    padding: 0.5rem;
+  }
+  
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .page-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .import-ics-button,
+  .add-task-button {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .timeline-container {
+    padding: 1rem 0;
+  }
+  
+  .timeline {
+    padding-left: 1.5rem;
+  }
+  
+  .timeline::before {
+    left: 1.5rem;
+  }
+  
+  .timeline-item {
+    padding-left: 1.5rem;
+  }
+  
+  .task-card {
+    padding: 1rem;
+  }
+  
+  .task-title {
+    font-size: 1.1rem;
+  }
 }
