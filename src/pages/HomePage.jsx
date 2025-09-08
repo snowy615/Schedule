@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, startOfWeek, endOfWeek, isBefore } from 'date-fns'
-import { Plus, ChevronLeft, ChevronRight, FolderPlus, Edit2, X } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, FolderPlus, Edit2, X, List } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import { usePlans } from '../hooks/usePlans'
 import TaskModal from '../components/TaskModal'
@@ -361,24 +361,25 @@ function HomePage() {
       </div>
 
       <div className="main-content">
-        {/* Plans Toolbar */}
-        {showPlansToolbar && (
-          <div className="plans-toolbar">
-            <div className="toolbar-header">
-              <h3>Current Plans</h3>
-              <button 
-                onClick={() => setShowPlansToolbar(false)} 
-                className="close-toolbar-button"
-                title="Hide plans toolbar"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="plans-list">
-              {activePlans.length === 0 ? (
-                <p className="no-plans-message">No active plans</p>
-              ) : (
-                activePlans.map(plan => (
+        {/* Plans Toolbar - Always visible */}
+        <div className="plans-toolbar">
+          <div className="toolbar-header">
+            <h3>
+              <List size={20} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
+              Current Plans
+            </h3>
+          </div>
+          <div className="plans-list">
+            {activePlans.length === 0 ? (
+              <p className="no-plans-message">No active plans</p>
+            ) : (
+              activePlans.map(plan => {
+                // Calculate completion percentage
+                const totalTasks = plan.tasks ? plan.tasks.length : 0;
+                const completedTasks = plan.tasks ? plan.tasks.filter(t => t.completed).length : 0;
+                const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+                
+                return (
                   <div 
                     key={plan.id} 
                     className="plan-toolbar-item"
@@ -386,41 +387,27 @@ function HomePage() {
                   >
                     <div className="plan-toolbar-content">
                       <h4>📋 {plan.title}</h4>
-                      <p className="plan-progress">
-                        {plan.tasks ? `${plan.current_task_index + 1}/${plan.tasks.length} tasks` : 'No tasks'}
-                      </p>
-                      {plan.tasks && plan.tasks.length > 0 && (
-                        <p className="plan-completion-info">
-                          {plan.tasks.filter(t => t.completed).length}/{plan.tasks.length} completed
-                        </p>
-                      )}
+                      <div className="plan-progress-container">
+                        <div className="plan-progress-bar">
+                          <div 
+                            className="plan-progress-fill" 
+                            style={{ width: `${completionPercentage}%` }}
+                          ></div>
+                        </div>
+                        <div className="plan-progress-text">
+                          {completedTasks}/{totalTasks} tasks ({completionPercentage}%)
+                        </div>
+                      </div>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-            <button 
-              className="toggle-toolbar-button hide-toolbar"
-              onClick={() => setShowPlansToolbar(false)}
-              title="Hide plans toolbar"
-            >
-              <ChevronLeft size={20} />
-            </button>
+                );
+              })
+            )}
           </div>
-        )}
+        </div>
 
         {/* Main Calendar Content */}
         <div className="calendar-content">
-          {!showPlansToolbar && (
-            <button 
-              className="toggle-toolbar-button show-toolbar"
-              onClick={() => setShowPlansToolbar(true)}
-              title="Show plans toolbar"
-            >
-              <ChevronRight size={20} />
-            </button>
-          )}
-
           <div className="calendar-grid">
             <div className="weekdays">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (

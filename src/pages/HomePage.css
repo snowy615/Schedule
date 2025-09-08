@@ -1,6 +1,7 @@
 .home-page {
-  max-width: 1200px;
+  max-width: 100%; /* Use full width */
   margin: 0 auto;
+  padding: 0 1rem;
 }
 
 .calendar-header {
@@ -65,13 +66,13 @@
 /* Main Content Layout */
 .main-content {
   display: flex;
-  gap: 1rem;
+  gap: 1.5rem; /* Increased gap */
   position: relative;
 }
 
 /* Plans Toolbar */
 .plans-toolbar {
-  width: 250px;
+  width: 280px;
   background: #1a1a1a;
   border-radius: 12px;
   border: 1px solid #333;
@@ -80,6 +81,8 @@
   position: sticky;
   top: 1rem;
   align-self: flex-start;
+  flex-shrink: 0;
+  margin-left: -0.5rem;
 }
 
 .toolbar-header {
@@ -93,21 +96,13 @@
   margin: 0;
   color: #ffffff;
   font-size: 1.3rem;
+  display: flex;
+  align-items: center;
 }
 
-.close-toolbar-button {
-  background: none;
-  border: none;
-  color: #888;
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: all 0.2s;
-}
-
-.close-toolbar-button:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+.toolbar-header h3 svg {
+  margin-right: 0.5rem;
+  vertical-align: middle;
 }
 
 .plans-list {
@@ -134,7 +129,7 @@
 }
 
 .plan-toolbar-content h4 {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.75rem 0;
   color: #ffffff;
   font-size: 1rem;
   white-space: nowrap;
@@ -142,22 +137,31 @@
   text-overflow: ellipsis;
 }
 
-.plan-progress {
-  margin: 0;
-  color: #888;
+.plan-progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.plan-progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: #333;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.plan-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.plan-progress-text {
   font-size: 0.8rem;
-}
-
-.plan-completion-info {
-  margin: 0.25rem 0 0 0;
-  color: #646cff;
-  font-size: 0.75rem;
-}
-
-.plan-progress-detail {
-  margin: 0.5rem 0 0 0;
-  color: #646cff;
-  font-size: 0.85rem;
+  color: #888;
+  text-align: right;
 }
 
 .no-plans-message {
@@ -167,40 +171,16 @@
   margin: 1rem 0;
 }
 
-/* Toggle Toolbar Buttons */
+/* Toggle Toolbar Buttons - Hide since toolbar is always visible */
 .toggle-toolbar-button {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: #2a2a2a;
-  border: 1px solid #333;
-  color: #888;
-  padding: 0.5rem;
-  border-radius: 0 6px 6px 0;
-  cursor: pointer;
-  transition: all 0.2s;
-  z-index: 10;
-}
-
-.toggle-toolbar-button:hover {
-  background: #333;
-  color: #ffffff;
-}
-
-.toggle-toolbar-button.show-toolbar {
-  left: 0;
-  border-radius: 0 6px 6px 0;
-}
-
-.toggle-toolbar-button.hide-toolbar {
-  right: 0;
-  border-radius: 6px 0 0 6px;
+  display: none;
 }
 
 /* Calendar Content */
 .calendar-content {
   flex: 1;
   position: relative;
+  min-width: 0;
 }
 
 .calendar-grid {
@@ -209,6 +189,8 @@
   overflow: hidden;
   border: 1px solid #333;
   margin-bottom: 2rem;
+  width: 100%;
+  min-width: 800px; /* Ensure minimum width */
 }
 
 .weekdays {
@@ -234,17 +216,19 @@
   grid-template-columns: repeat(7, 1fr);
   gap: 1px;
   background: #333;
+  width: 100%;
 }
 
 .calendar-day {
   background: #1a1a1a;
-  min-height: 120px;
-  padding: 0.75rem;
+  min-height: 150px; /* Increased height */
+  padding: 1rem; /* Increased padding */
   cursor: pointer;
   transition: background-color 0.2s;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  min-width: 0;
 }
 
 .calendar-day:hover {

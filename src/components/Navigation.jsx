@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Calendar, Clock, User, LogOut, CheckSquare, Grid3X3 } from 'lucide-react'
+import { Calendar, Clock, User, LogOut, CheckSquare, Grid3X3, List } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import './Navigation.css'
 
