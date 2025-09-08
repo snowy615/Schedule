@@ -227,95 +227,97 @@ function TasksTodayPage() {
 
   return (
     <div className="tasks-today-page">
-      <div className="page-header">
-        <h1>Today's Tasks</h1>
-        <div className="header-actions">
-          <input 
-            type="file" 
-            accept=".ics" 
-            onChange={handleICSImport} 
-            style={{ display: 'none' }} 
-            id="ics-file-input-today" 
+      <div className="tasks-today-container">
+        <div className="page-header">
+          <h1>Today's Tasks</h1>
+          <div className="header-actions">
+            <input 
+              type="file" 
+              accept=".ics" 
+              onChange={handleICSImport} 
+              style={{ display: 'none' }} 
+              id="ics-file-input-today" 
+            />
+            <label htmlFor="ics-file-input-today" className="import-ics-button">
+              Import ICS
+            </label>
+            <button 
+              onClick={() => setShowTaskModal(true)}
+              className="add-task-button"
+            >
+              <Plus size={20} />
+              Add Task
+            </button>
+          </div>
+        </div>
+
+        <div className="progress-section">
+          <div className="progress-stats">
+            <div className="stat">
+              <span className="stat-number">{pendingTasks.length}</span>
+              <span className="stat-label">Pending</span>
+            </div>
+            <div className="stat">
+              <span className="stat-number">{completedTasks.length}</span>
+              <span className="stat-label">Completed</span>
+            </div>
+            <div className="stat">
+              <span className="stat-number">{todayTasks.length}</span>
+              <span className="stat-label">Total</span>
+            </div>
+          </div>
+          {todayTasks.length > 0 && (
+            <div className="progress-bar">
+              <div 
+                className="progress-fill"
+                style={{ width: `${(completedTasks.length / todayTasks.length) * 100}%` }}
+              ></div>
+            </div>
+          )}
+        </div>
+
+        <div className="tasks-timeline">
+          {todayTasks.length === 0 && overdueTasks.length === 0 ? (
+            <div className="no-tasks">
+              <Clock size={48} />
+              <h3>No tasks for today</h3>
+              <p>Add a task to get started!</p>
+            </div>
+          ) : (
+            <div className="timeline">
+              {overdueTasks.length > 0 && (
+                <>
+                  <div className="timeline-separator overdue-separator">
+                    <span>Overdue Tasks</span>
+                  </div>
+                  {overdueTasks.map(task => renderTaskItem(task, true))}
+                </>
+              )}
+              
+              {pendingTasks.map(task => renderTaskItem(task))}
+              
+              {completedTasks.length > 0 && (
+                <>
+                  <div className="timeline-separator">
+                    <span>Completed Tasks</span>
+                  </div>
+                  {completedTasks.map(task => renderTaskItem(task))}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {showTaskModal && (
+          <TaskModal
+            onClose={handleCloseTaskModal}
+            onSave={handleSaveTask}
+            selectedDate={today}
+            task={editingTask}
+            isEditing={!!editingTask}
           />
-          <label htmlFor="ics-file-input-today" className="import-ics-button">
-            Import ICS
-          </label>
-          <button 
-            onClick={() => setShowTaskModal(true)}
-            className="add-task-button"
-          >
-            <Plus size={20} />
-            Add Task
-          </button>
-        </div>
-      </div>
-
-      <div className="progress-section">
-        <div className="progress-stats">
-          <div className="stat">
-            <span className="stat-number">{pendingTasks.length}</span>
-            <span className="stat-label">Pending</span>
-          </div>
-          <div className="stat">
-            <span className="stat-number">{completedTasks.length}</span>
-            <span className="stat-label">Completed</span>
-          </div>
-          <div className="stat">
-            <span className="stat-number">{todayTasks.length}</span>
-            <span className="stat-label">Total</span>
-          </div>
-        </div>
-        {todayTasks.length > 0 && (
-          <div className="progress-bar">
-            <div 
-              className="progress-fill"
-              style={{ width: `${(completedTasks.length / todayTasks.length) * 100}%` }}
-            ></div>
-          </div>
         )}
       </div>
-
-      <div className="tasks-timeline">
-        {todayTasks.length === 0 && overdueTasks.length === 0 ? (
-          <div className="no-tasks">
-            <Clock size={48} />
-            <h3>No tasks for today</h3>
-            <p>Add a task to get started!</p>
-          </div>
-        ) : (
-          <div className="timeline">
-            {overdueTasks.length > 0 && (
-              <>
-                <div className="timeline-separator overdue-separator">
-                  <span>Overdue Tasks</span>
-                </div>
-                {overdueTasks.map(task => renderTaskItem(task, true))}
-              </>
-            )}
-            
-            {pendingTasks.map(task => renderTaskItem(task))}
-            
-            {completedTasks.length > 0 && (
-              <>
-                <div className="timeline-separator">
-                  <span>Completed Tasks</span>
-                </div>
-                {completedTasks.map(task => renderTaskItem(task))}
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
-      {showTaskModal && (
-        <TaskModal
-          onClose={handleCloseTaskModal}
-          onSave={handleSaveTask}
-          selectedDate={today}
-          task={editingTask}
-          isEditing={!!editingTask}
-        />
-      )}
     </div>
   )
 }
