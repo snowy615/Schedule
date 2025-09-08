@@ -12,6 +12,8 @@ function TodayHourSchedulePage() {
   const [showTaskModal, setShowTaskModal] = useState(false)
   const [isEarlyHoursExpanded, setIsEarlyHoursExpanded] = useState(false)
   const [isLateHoursExpanded, setIsLateHoursExpanded] = useState(false)
+  const [hoveredTask, setHoveredTask] = useState(null)
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
   const { tasks, loading, addTask, toggleTask, deleteTask } = useTasks()
   const today = new Date()
 
@@ -187,6 +189,55 @@ function TodayHourSchedulePage() {
     .filter(slot => slot.isLateHour)
     .reduce((count, slot) => count + slot.tasks.length, 0)
 
+  // Handle task hover for tooltip
+  const handleTaskMouseEnter = (task, event) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const windowWidth = window.innerWidth
+    const windowHeight = window.innerHeight
+    const isMobile = windowWidth <= 768
+    const tooltipWidth = isMobile ? Math.min(240, windowWidth - 40) : 280
+    const estimatedTooltipHeight = 150 + (task.description ? 40 : 0) + (task.repeat_type && task.repeat_type !== 'none' ? 25 : 0)
+    
+    // Horizontal positioning - prefer right side, fall back to left
+    let x = rect.right + 10
+    if (x + tooltipWidth > windowWidth - 20) {
+      x = rect.left - tooltipWidth - 10
+      // If left positioning also goes off-screen, center it
+      if (x < 20) {
+        x = Math.max(20, (windowWidth - tooltipWidth) / 2)
+      }
+    }
+    
+    // Vertical positioning with enhanced viewport-aware strategy
+    let y = rect.top
+    const isInBottomHalf = rect.top > windowHeight / 2
+    const tooltipWouldOverflow = rect.top + estimatedTooltipHeight > windowHeight - 20
+    
+    if (isInBottomHalf && tooltipWouldOverflow) {
+      // For bottom-half elements, try bottom alignment first
+      const bottomAlignedY = rect.bottom - estimatedTooltipHeight
+      if (bottomAlignedY >= 20) {
+        y = bottomAlignedY
+      } else {
+        // If bottom alignment fails, limit upward movement to maintain visual connection
+        const maxUpwardMovement = Math.min(150, estimatedTooltipHeight * 0.7)
+        y = Math.max(rect.top - maxUpwardMovement, 20)
+      }
+    } else if (tooltipWouldOverflow) {
+      // For top-half elements that would overflow, move up with controlled overhang
+      const allowedOverhang = 50
+      y = Math.max(windowHeight - estimatedTooltipHeight - 20, rect.top - allowedOverhang)
+    }
+    // else: use default top alignment (y = rect.top)
+    
+    setTooltipPosition({ x, y })
+    setHoveredTask(task)
+  }
+
+  const handleTaskMouseLeave = () => {
+    setHoveredTask(null)
+  }
+
   return (
     <div className="today-hour-schedule-page">
       <div className="hour-schedule-header">
@@ -261,10 +312,25 @@ function TodayHourSchedulePage() {
                   const priorityStyles = getPriorityStyles(task.priority || 3)
                   const positioning = getTaskPositioning(task, slot.hour)
                   
+                  // Calculate task duration in minutes to determine if it's a short task
+                  const getTaskDurationInMinutes = () => {
+                    if (!task.start_time || !task.finish_time) return 60 // Default 1 hour
+                    const [startHour, startMin] = task.start_time.split(':').map(Number)
+                    const [endHour, endMin] = task.finish_time.split(':').map(Number)
+                    const startTotal = startHour * 60 + startMin
+                    const endTotal = endHour * 60 + endMin
+                    return endTotal - startTotal
+                  }
+                  
+                  const taskDurationMinutes = getTaskDurationInMinutes()
+                  const isShortDuration = taskDurationMinutes <= 30
+                  
                   return (
                     <div 
                       key={`${task.id}-${slot.hour}`}
-                      className={`hour-task-card continuous-task ${task.completed ? 'completed' : 'pending'}`}
+                      className={`hour-task-card continuous-task ${task.completed ? 'completed' : 'pending'}${isShortDuration ? ' short-duration' : ''}`}
+                      onMouseEnter={(e) => handleTaskMouseEnter(task, e)}
+                      onMouseLeave={handleTaskMouseLeave}
                       style={{
                         position: 'absolute',
                         top: `${positioning.top}px`,
@@ -313,7 +379,7 @@ function TodayHourSchedulePage() {
                               ×
                             </button>
                           </div>
-                          {task.description && positioning.height > 100 && (
+                          {task.description && positioning.height > 60 && !isShortDuration && (
                             <p className={`task-description ${task.completed ? 'completed-text' : ''}`}>
                               {task.description}
                             </p>
@@ -387,6 +453,73 @@ function TodayHourSchedulePage() {
           </div>
         )}
       </div>
+
+      {/* Task Hover Tooltip */}
+      {hoveredTask && (
+        <div 
+          className={`task-tooltip ${hoveredTask ? 'visible' : ''}`}
+          style={{
+            left: `${tooltipPosition.x}px`,
+            top: `${tooltipPosition.y}px`
+          }}
+        >
+          <div className="tooltip-title">
+            {getRepeatIcon(hoveredTask.repeat_type)} {hoveredTask.title}
+          </div>
+          
+          {hoveredTask.description && (
+            <div className="tooltip-description">
+              {hoveredTask.description}
+            </div>
+          )}
+          
+          <div className="tooltip-details">
+            <div className="tooltip-detail-row">
+              <span className="tooltip-detail-label">Priority:</span>
+              <span 
+                className="tooltip-priority"
+                style={{
+                  backgroundColor: getPriorityStyles(hoveredTask.priority || 3).backgroundColor,
+                  color: getPriorityStyles(hoveredTask.priority || 3).color,
+                  border: `1px solid ${getPriorityStyles(hoveredTask.priority || 3).color}`
+                }}
+              >
+                P{hoveredTask.priority || 3}
+              </span>
+            </div>
+            
+            <div className="tooltip-detail-row">
+              <span className="tooltip-detail-label">Time:</span>
+              <span className="tooltip-detail-value">
+                {hoveredTask.start_time && hoveredTask.finish_time
+                  ? `${formatTime(hoveredTask.start_time)} - ${formatTime(hoveredTask.finish_time)}`
+                  : hoveredTask.start_time
+                  ? `Start: ${formatTime(hoveredTask.start_time)}`
+                  : hoveredTask.finish_time
+                  ? `End: ${formatTime(hoveredTask.finish_time)}`
+                  : 'No time set'
+                }
+              </span>
+            </div>
+            
+            {hoveredTask.repeat_type && hoveredTask.repeat_type !== 'none' && (
+              <div className="tooltip-detail-row">
+                <span className="tooltip-detail-label">Repeat:</span>
+                <span className="tooltip-repeat-badge">
+                  🔄 {formatRepeatType(hoveredTask.repeat_type)}
+                </span>
+              </div>
+            )}
+            
+            <div className="tooltip-detail-row">
+              <span className="tooltip-detail-label">Status:</span>
+              <span className="tooltip-detail-value">
+                {hoveredTask.completed ? '✅ Completed' : '⏳ Pending'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showTaskModal && (
         <TaskModal

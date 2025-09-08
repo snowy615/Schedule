@@ -114,6 +114,11 @@
   overflow: hidden;
 }
 
+/* Adjust padding for short duration tasks */
+.hour-task-card.continuous-task.short-duration {
+  padding: 0.25rem 0.5rem;
+}
+
 .task-continuation {
   display: flex;
   align-items: center;
@@ -128,6 +133,126 @@
   font-style: italic;
   text-align: center;
   opacity: 0.8;
+}
+
+/* Compact layout for short tasks */
+.hour-task-card.short-duration .task-header {
+  margin-bottom: 0.25rem;
+  gap: 0.5rem;
+}
+
+.hour-task-card.short-duration .task-title {
+  font-size: 0.85rem;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.hour-task-card.short-duration .task-badges {
+  gap: 0.25rem;
+}
+
+.hour-task-card.short-duration .priority-badge {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.3rem;
+}
+
+.hour-task-card.short-duration .task-time-info {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.hour-task-card.short-duration .task-checkbox {
+  width: 14px;
+  height: 14px;
+}
+
+.hour-task-card.short-duration .delete-button {
+  font-size: 1rem;
+  padding: 0.125rem;
+}
+
+/* Task hover tooltip */
+.task-tooltip {
+  position: fixed;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  min-width: 280px;
+  max-width: 350px;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+  transform: translateY(-10px);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.task-tooltip.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.tooltip-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.3;
+}
+
+.tooltip-description {
+  color: #ccc;
+  margin: 0.5rem 0;
+  line-height: 1.4;
+  font-size: 0.9rem;
+}
+
+.tooltip-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #444;
+}
+
+.tooltip-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.tooltip-detail-label {
+  color: #888;
+  min-width: 70px;
+}
+
+.tooltip-detail-value {
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.tooltip-priority {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.tooltip-repeat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #888;
 }
 
 .hour-task-card.completed {
@@ -273,6 +398,23 @@
     padding: 0.5rem;
   }
   
+  .hour-task-card.short-duration {
+    padding: 0.2rem 0.4rem;
+  }
+  
+  .hour-task-card.short-duration .task-title {
+    font-size: 0.8rem;
+  }
+  
+  .hour-task-card.short-duration .task-checkbox {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .hour-task-card.short-duration .delete-button {
+    font-size: 0.9rem;
+  }
+  
   .continuation-text {
     font-size: 0.7rem;
   }
@@ -298,6 +440,27 @@
   .collapse-late-hours-button {
     font-size: 0.8rem;
     padding: 0.5rem 0.75rem;
+  }
+  
+  /* Mobile tooltip adjustments */
+  .task-tooltip {
+    min-width: 240px;
+    max-width: calc(100vw - 40px);
+    font-size: 0.85rem;
+    padding: 0.75rem;
+    max-height: 60vh;
+  }
+  
+  .tooltip-title {
+    font-size: 1rem;
+  }
+  
+  .tooltip-description {
+    font-size: 0.8rem;
+  }
+  
+  .tooltip-detail-row {
+    font-size: 0.75rem;
   }
 }
 
