@@ -62,6 +62,147 @@
   background: #535bf2;
 }
 
+/* Main Content Layout */
+.main-content {
+  display: flex;
+  gap: 1rem;
+  position: relative;
+}
+
+/* Plans Toolbar */
+.plans-toolbar {
+  width: 250px;
+  background: #1a1a1a;
+  border-radius: 12px;
+  border: 1px solid #333;
+  padding: 1.5rem;
+  height: fit-content;
+  position: sticky;
+  top: 1rem;
+  align-self: flex-start;
+}
+
+.toolbar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.toolbar-header h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1.3rem;
+}
+
+.close-toolbar-button {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.close-toolbar-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.plans-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.plan-toolbar-item {
+  background: #2a2a2a;
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid #333;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.plan-toolbar-item:hover {
+  border-color: #16a34a;
+  transform: translateY(-2px);
+}
+
+.plan-toolbar-content h4 {
+  margin: 0 0 0.5rem 0;
+  color: #ffffff;
+  font-size: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plan-progress {
+  margin: 0;
+  color: #888;
+  font-size: 0.8rem;
+}
+
+.plan-completion-info {
+  margin: 0.25rem 0 0 0;
+  color: #646cff;
+  font-size: 0.75rem;
+}
+
+.plan-progress-detail {
+  margin: 0.5rem 0 0 0;
+  color: #646cff;
+  font-size: 0.85rem;
+}
+
+.no-plans-message {
+  color: #888;
+  font-style: italic;
+  text-align: center;
+  margin: 1rem 0;
+}
+
+/* Toggle Toolbar Buttons */
+.toggle-toolbar-button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #2a2a2a;
+  border: 1px solid #333;
+  color: #888;
+  padding: 0.5rem;
+  border-radius: 0 6px 6px 0;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.toggle-toolbar-button:hover {
+  background: #333;
+  color: #ffffff;
+}
+
+.toggle-toolbar-button.show-toolbar {
+  left: 0;
+  border-radius: 0 6px 6px 0;
+}
+
+.toggle-toolbar-button.hide-toolbar {
+  right: 0;
+  border-radius: 6px 0 0 6px;
+}
+
+/* Calendar Content */
+.calendar-content {
+  flex: 1;
+  position: relative;
+}
+
 .calendar-grid {
   background: #1a1a1a;
   border-radius: 12px;
@@ -331,6 +472,22 @@
   
   .selected-date-tasks {
     padding: 1rem;
+  }
+  
+  /* Mobile layout - stack toolbar and calendar vertically */
+  .main-content {
+    flex-direction: column;
+  }
+  
+  .plans-toolbar {
+    width: 100%;
+    position: relative;
+    top: 0;
+    align-self: auto;
+  }
+  
+  .toggle-toolbar-button {
+    display: none;
   }
 }
 

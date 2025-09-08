@@ -130,7 +130,15 @@ class Task {
         } else if (this.changes === 0) {
           reject(new Error('Task not found or unauthorized'));
         } else {
-          Task.findById(id).then(resolve).catch(reject);
+          // Check if this update might affect plan completion
+          Task.checkAndUpdatePlanCompletion(id)
+            .then(() => {
+              Task.findById(id).then(resolve).catch(reject);
+            })
+            .catch(planErr => {
+              // Even if plan update fails, still return the updated task
+              Task.findById(id).then(resolve).catch(reject);
+            });
         }
       });
     });
@@ -184,6 +192,9 @@ class Task {
           try {
             // Get the updated task
             const updatedTask = await Task.findById(id);
+            
+            // Check if this might affect plan completion
+            await Task.checkAndUpdatePlanCompletion(id);
             
             // If the task was just completed and it's a recurring task, generate next occurrence
             if (updatedTask.completed && 
@@ -393,6 +404,48 @@ Task.findRecurringTasksNeedingGeneration = function(userId, daysAhead = 30) {
           completed: Boolean(row.completed)
         }));
         resolve(tasks);
+      }
+    });
+  });
+};
+
+// Add this new method to check and update plan completion status
+Task.checkAndUpdatePlanCompletion = async function(taskId) {
+  return new Promise((resolve, reject) => {
+    const database = require('../database');
+    const db = database.getDB();
+    
+    // First, get the task to see if it belongs to a plan
+    db.get(`
+      SELECT t.plan_id, p.completed as plan_completed
+      FROM tasks t
+      LEFT JOIN plans p ON t.plan_id = p.id
+      WHERE t.id = ?
+    `, [taskId], async (err, row) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      
+      // If task doesn't belong to a plan, nothing to do
+      if (!row || !row.plan_id) {
+        resolve(null);
+        return;
+      }
+      
+      // If plan is already completed, nothing to do
+      if (row.plan_completed) {
+        resolve(null);
+        return;
+      }
+      
+      // Check if all tasks in the plan are completed
+      try {
+        const Plan = require('./Plan');
+        const updatedPlan = await Plan.markPlanAsCompletedIfAllTasksDone(row.plan_id);
+        resolve(updatedPlan);
+      } catch (planErr) {
+        reject(planErr);
       }
     });
   });

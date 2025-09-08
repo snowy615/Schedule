@@ -523,8 +523,11 @@ class Plan {
               return;
             }
             
+            // Check if we're updating the completed status
+            const isCompletionUpdate = updates.hasOwnProperty('completed') && updates.completed !== task.completed;
+            
             // Build dynamic update query
-            const allowedFields = ['title', 'description', 'priority', 'date'];
+            const allowedFields = ['title', 'description', 'priority', 'date', 'completed'];
             const fields = [];
             const values = [];
             
@@ -554,13 +557,31 @@ class Plan {
                 return;
               }
               
-              db.run('COMMIT', (commitErr) => {
-                if (commitErr) {
-                  reject(commitErr);
-                } else {
-                  Plan.findById(planId).then(resolve).catch(reject);
-                }
-              });
+              // If this was a completion update, check if all tasks are now completed
+              if (isCompletionUpdate) {
+                Plan.markPlanAsCompletedIfAllTasksDone(planId)
+                  .then(() => {
+                    db.run('COMMIT', (commitErr) => {
+                      if (commitErr) {
+                        reject(commitErr);
+                      } else {
+                        Plan.findById(planId).then(resolve).catch(reject);
+                      }
+                    });
+                  })
+                  .catch(markErr => {
+                    db.run('ROLLBACK');
+                    reject(markErr);
+                  });
+              } else {
+                db.run('COMMIT', (commitErr) => {
+                  if (commitErr) {
+                    reject(commitErr);
+                  } else {
+                    Plan.findById(planId).then(resolve).catch(reject);
+                  }
+                });
+              }
             });
           });
         });
@@ -676,6 +697,68 @@ class Plan {
       });
     });
   }
+
+  // Helper function to check if all tasks in a plan are completed
+  static async areAllTasksCompleted(planId) {
+    return new Promise((resolve, reject) => {
+      const db = database.getDB();
+      
+      db.get(`
+        SELECT COUNT(*) as total_tasks, 
+               SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as completed_tasks
+        FROM tasks 
+        WHERE plan_id = ?
+      `, [planId], (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result.total_tasks > 0 && result.total_tasks === result.completed_tasks);
+        }
+      });
+    });
+  }
+
+  // Helper function to mark plan as completed if all tasks are completed
+  static async markPlanAsCompletedIfAllTasksDone(planId) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const allTasksCompleted = await Plan.areAllTasksCompleted(planId);
+        
+        if (allTasksCompleted) {
+          const db = database.getDB();
+          
+          // Get the total number of tasks to set current_task_index correctly
+          db.get('SELECT COUNT(*) as total_tasks FROM tasks WHERE plan_id = ?', [planId], (err, result) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+            
+            const totalTasks = result.total_tasks;
+            
+            // Mark plan as completed
+            db.run(`
+              UPDATE plans 
+              SET completed = 1, current_task_index = ?, updated_at = CURRENT_TIMESTAMP 
+              WHERE id = ?
+            `, [totalTasks, planId], (updateErr) => {
+              if (updateErr) {
+                reject(updateErr);
+              } else {
+                Plan.findById(planId).then(resolve).catch(reject);
+              }
+            });
+          });
+        } else {
+          // If not all tasks are completed, resolve with null to indicate no change was needed
+          resolve(null);
+        }
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
 }
 
 module.exports = Plan;

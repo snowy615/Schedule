@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, startOfWeek, endOfWeek, isBefore } from 'date-fns'
-import { Plus, ChevronLeft, ChevronRight, FolderPlus, Edit2 } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, FolderPlus, Edit2, X } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import { usePlans } from '../hooks/usePlans'
 import TaskModal from '../components/TaskModal'
@@ -9,6 +9,7 @@ import PlanDetailModal from '../components/PlanDetailModal'
 import { formatDateForAPI, formatDateForAPIWithDelay, parseDateSafely } from '../utils/dateUtils'
 import { getPriorityStyles } from '../utils/priorityUtils'
 import { formatRepeatType, getRepeatIcon } from '../utils/repeatUtils'
+import { getActivePlans } from '../utils/planUtils'
 import './HomePage.css'
 
 function HomePage() {
@@ -20,6 +21,7 @@ function HomePage() {
   const [dragOverDate, setDragOverDate] = useState(null)
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [editingTask, setEditingTask] = useState(null)
+  const [showPlansToolbar, setShowPlansToolbar] = useState(true)
   const { tasks, loading, addTask, toggleTask, deleteTask, updateTask } = useTasks()
   const { plans, addPlan, deletePlan, completeCurrentTask, getCurrentTask, addTaskToPlan, updatePlanTask, deletePlanTask } = usePlans()
 
@@ -28,6 +30,9 @@ function HomePage() {
   const calendarStart = startOfWeek(monthStart)
   const calendarEnd = endOfWeek(monthEnd)
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
+
+  // Get active plans (incomplete plans)
+  const activePlans = getActivePlans(plans);
 
   const navigateMonth = (direction) => {
     setCurrentDate(prev => {
@@ -355,132 +360,318 @@ function HomePage() {
         </div>
       </div>
 
-      <div className="calendar-grid">
-        <div className="weekdays">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="weekday">{day}</div>
-          ))}
-        </div>
-        
-        <div className="days-grid">
-          {calendarDays.map(day => {
-            const dayTasks = getTasksForDate(day)
-            const dayPlans = getPlansForDate(day)
-            const isSelected = isSameDay(day, selectedDate)
-            const isTodayDate = isToday(day)
-            const isCurrentMonth = day.getMonth() === currentDate.getMonth()
-            
-            return (
-              <div
-                key={day.toISOString()}
-                className={`calendar-day ${
-                  isSelected ? 'selected' : ''
-                } ${
-                  isTodayDate ? 'today' : ''
-                } ${
-                  !isCurrentMonth ? 'other-month' : ''
-                } ${
-                  dragOverDate && isSameDay(dragOverDate, day) ? 'drag-over' : ''
-                }`}
-                onClick={() => setSelectedDate(day)}
-                onDragOver={(e) => handleDragOver(e, day)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, day)}
+      <div className="main-content">
+        {/* Plans Toolbar */}
+        {showPlansToolbar && (
+          <div className="plans-toolbar">
+            <div className="toolbar-header">
+              <h3>Current Plans</h3>
+              <button 
+                onClick={() => setShowPlansToolbar(false)} 
+                className="close-toolbar-button"
+                title="Hide plans toolbar"
               >
-                <span className="day-number">{format(day, 'd')}</span>
-                <div className="day-items">
-                  {/* Render Plans */}
-                  {dayPlans.slice(0, 2).map(plan => (
-                    <div
-                      key={`plan-${plan.id}`}
-                      className={`plan-indicator ${
-                        plan.completed ? 'completed' : ''
-                      }`}
-                      title={`📋 ${plan.title} (Plan)`}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handlePlanClick(plan)
-                      }}
-                    >
-                      📋 {plan.title.substring(0, 15)}
-                      {plan.title.length > 15 ? '...' : ''}
+                <X size={20} />
+              </button>
+            </div>
+            <div className="plans-list">
+              {activePlans.length === 0 ? (
+                <p className="no-plans-message">No active plans</p>
+              ) : (
+                activePlans.map(plan => (
+                  <div 
+                    key={plan.id} 
+                    className="plan-toolbar-item"
+                    onClick={() => handlePlanClick(plan)}
+                  >
+                    <div className="plan-toolbar-content">
+                      <h4>📋 {plan.title}</h4>
+                      <p className="plan-progress">
+                        {plan.tasks ? `${plan.current_task_index + 1}/${plan.tasks.length} tasks` : 'No tasks'}
+                      </p>
+                      {plan.tasks && plan.tasks.length > 0 && (
+                        <p className="plan-completion-info">
+                          {plan.tasks.filter(t => t.completed).length}/{plan.tasks.length} completed
+                        </p>
+                      )}
                     </div>
-                  ))}
-                  
-                  {/* Render Tasks */}
-                  {dayTasks.slice(0, 3 - dayPlans.length).map(task => {
-                    const priorityStyles = getPriorityStyles(task.priority || 3)
-                    const isDragging = draggedTask && draggedTask.id === task.id
-                    return (
-                      <div
-                        key={task.id}
-                        className={`task-indicator ${
-                          task.completed ? 'completed' : ''
-                        } ${
-                          isDragging ? 'dragging' : ''
-                        }`}
-                        style={{
-                          borderLeft: `3px solid ${priorityStyles.color}`,
-                          backgroundColor: priorityStyles.backgroundColor,
-                          opacity: isDragging ? 0.5 : 1
-                        }}
-                        title={`${task.title} (${task.priority ? `P${task.priority}` : 'P3'}${task.repeat_type && task.repeat_type !== 'none' ? ` - ${formatRepeatType(task.repeat_type)}` : ''})`}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, task)}
-                        onDragEnd={handleDragEnd}
-                      >
-                        {getRepeatIcon(task.repeat_type)} {task.title.substring(0, 18)}
-                        {task.title.length > 18 ? '...' : ''}
-                      </div>
-                    )
-                  })}
-                  
-                  {(dayTasks.length + dayPlans.length) > 3 && (
-                    <div className="more-items">+{(dayTasks.length + dayPlans.length) - 3} more</div>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      <div className="selected-date-tasks">
-        <h3>{format(selectedDate, 'EEEE, MMMM d, yyyy')}</h3>
-        {loading ? (
-          <div className="loading-container">
-            <div className="loading-spinner"></div>
-            <p>Loading items...</p>
+                  </div>
+                ))
+              )}
+            </div>
+            <button 
+              className="toggle-toolbar-button hide-toolbar"
+              onClick={() => setShowPlansToolbar(false)}
+              title="Hide plans toolbar"
+            >
+              <ChevronLeft size={20} />
+            </button>
           </div>
-        ) : (
-          <div className="items-list">
-            {getPlansForDate(selectedDate).length === 0 && 
-             getTasksForDate(selectedDate).length === 0 && 
-             getOverdueTasks(selectedDate).length === 0 ? (
-              <p className="no-items">No tasks or plans for this day</p>
+        )}
+
+        {/* Main Calendar Content */}
+        <div className="calendar-content">
+          {!showPlansToolbar && (
+            <button 
+              className="toggle-toolbar-button show-toolbar"
+              onClick={() => setShowPlansToolbar(true)}
+              title="Show plans toolbar"
+            >
+              <ChevronRight size={20} />
+            </button>
+          )}
+
+          <div className="calendar-grid">
+            <div className="weekdays">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                <div key={day} className="weekday">{day}</div>
+              ))}
+            </div>
+            
+            <div className="days-grid">
+              {calendarDays.map(day => {
+                const dayTasks = getTasksForDate(day)
+                const dayPlans = getPlansForDate(day)
+                const isSelected = isSameDay(day, selectedDate)
+                const isTodayDate = isToday(day)
+                const isCurrentMonth = day.getMonth() === currentDate.getMonth()
+                
+                return (
+                  <div
+                    key={day.toISOString()}
+                    className={`calendar-day ${
+                      isSelected ? 'selected' : ''
+                    } ${
+                      isTodayDate ? 'today' : ''
+                    } ${
+                      !isCurrentMonth ? 'other-month' : ''
+                    } ${
+                      dragOverDate && isSameDay(dragOverDate, day) ? 'drag-over' : ''
+                    }`}
+                    onClick={() => setSelectedDate(day)}
+                    onDragOver={(e) => handleDragOver(e, day)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, day)}
+                  >
+                    <span className="day-number">{format(day, 'd')}</span>
+                    <div className="day-items">
+                      {/* Render Plans */}
+                      {dayPlans.slice(0, 2).map(plan => (
+                        <div
+                          key={`plan-${plan.id}`}
+                          className={`plan-indicator ${
+                            plan.completed ? 'completed' : ''
+                          }`}
+                          title={`📋 ${plan.title} (Plan)`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handlePlanClick(plan)
+                          }}
+                        >
+                          📋 {plan.title.substring(0, 15)}
+                          {plan.title.length > 15 ? '...' : ''}
+                        </div>
+                      ))}
+                      
+                      {/* Render Tasks */}
+                      {dayTasks.slice(0, 3 - dayPlans.length).map(task => {
+                        const priorityStyles = getPriorityStyles(task.priority || 3)
+                        const isDragging = draggedTask && draggedTask.id === task.id
+                        return (
+                          <div
+                            key={task.id}
+                            className={`task-indicator ${
+                              task.completed ? 'completed' : ''
+                            } ${
+                              isDragging ? 'dragging' : ''
+                            }`}
+                            style={{
+                              borderLeft: `3px solid ${priorityStyles.color}`,
+                              backgroundColor: priorityStyles.backgroundColor,
+                              opacity: isDragging ? 0.5 : 1
+                            }}
+                            title={`${task.title} (${task.priority ? `P${task.priority}` : 'P3'}${task.repeat_type && task.repeat_type !== 'none' ? ` - ${formatRepeatType(task.repeat_type)}` : ''})`}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, task)}
+                            onDragEnd={handleDragEnd}
+                          >
+                            {getRepeatIcon(task.repeat_type)} {task.title.substring(0, 18)}
+                            {task.title.length > 18 ? '...' : ''}
+                          </div>
+                        )
+                      })}
+                      
+                      {(dayTasks.length + dayPlans.length) > 3 && (
+                        <div className="more-items">+{(dayTasks.length + dayPlans.length) - 3} more</div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="selected-date-tasks">
+            <h3>{format(selectedDate, 'EEEE, MMMM d, yyyy')}</h3>
+            {loading ? (
+              <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <p>Loading items...</p>
+              </div>
             ) : (
-              <>
-                {/* Render Overdue Tasks (only when viewing today) */}
-                {isToday(selectedDate) && getOverdueTasks(selectedDate).length > 0 && (
-                  <div className="overdue-section">
-                    <h4 className="overdue-header">Overdue Tasks</h4>
-                    {getOverdueTasks(selectedDate).map(task => {
+              <div className="items-list">
+                {getPlansForDate(selectedDate).length === 0 && 
+                getTasksForDate(selectedDate).length === 0 && 
+                getOverdueTasks(selectedDate).length === 0 ? (
+                  <p className="no-items">No tasks or plans for this day</p>
+                ) : (
+                  <>
+                    {/* Render Overdue Tasks (only when viewing today) */}
+                    {isToday(selectedDate) && getOverdueTasks(selectedDate).length > 0 && (
+                      <div className="overdue-section">
+                        <h4 className="overdue-header">Overdue Tasks</h4>
+                        {getOverdueTasks(selectedDate).map(task => {
+                          const priorityStyles = getPriorityStyles(task.priority || 3)
+                          const isDragging = draggedTask && draggedTask.id === task.id
+                          return (
+                            <div key={`overdue-${task.id}`} className={`task-item overdue ${
+                              task.completed ? 'completed' : ''
+                            } ${
+                              isDragging ? 'dragging' : ''
+                            }`}
+                                style={{
+                                  borderLeft: `4px solid ${priorityStyles.color}`,
+                                  backgroundColor: priorityStyles.backgroundColor,
+                                  opacity: isDragging ? 0.5 : 1
+                                }}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, task)}
+                                onDragEnd={handleDragEnd}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={task.completed}
+                                onChange={() => toggleTask(task.id)}
+                              />
+                              <div className="task-content">
+                                <div className="task-header-info">
+                                  <h4>{getRepeatIcon(task.repeat_type)} {task.title}</h4>
+                                  <div className="task-badges">
+                                    <span className="priority-badge" style={{ color: priorityStyles.color }}>
+                                      P{task.priority || 3}
+                                    </span>
+                                    <span className="overdue-badge">OVERDUE</span>
+                                    {task.repeat_type && task.repeat_type !== 'none' && (
+                                      <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
+                                        🔄
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                {task.description && <p>{task.description}</p>}
+                                <div className="task-meta">
+                                  <span className="overdue-date">Due: {format(parseDateSafely(task.date), 'MMM d, yyyy')}</span>
+                                  {task.repeat_type && task.repeat_type !== 'none' && (
+                                    <div className="repeat-info">
+                                      <small>Repeats: {formatRepeatType(task.repeat_type)}
+                                        {task.repeat_until && ` until ${new Date(task.repeat_until).toLocaleDateString()}`}
+                                      </small>
+                                    </div>
+                                  )}
+                                  {(task.start_time || task.finish_time) && (
+                                    <span className="task-time">
+                                      {task.start_time && task.finish_time 
+                                        ? `${task.start_time} - ${task.finish_time}`
+                                        : task.start_time 
+                                          ? `Start: ${task.start_time}`
+                                          : `End: ${task.finish_time}`
+                                      }
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="task-actions">
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleEditTask(task)
+                                  }}
+                                  className="edit-button"
+                                  title="Edit task"
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    deleteTask(task.id)
+                                  }}
+                                  className="delete-button"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                    
+                    {/* Render Plans */}
+                    {getPlansForDate(selectedDate).map(plan => (
+                      <div 
+                        key={`plan-${plan.id}`} 
+                        className={`plan-item ${
+                          plan.completed ? 'completed' : ''
+                        }`}
+                        onClick={() => handlePlanClick(plan)}
+                      >
+                        <div className="plan-content">
+                          <div className="plan-header-info">
+                            <h4>📋 {plan.title}</h4>
+                            <div className="plan-badges">
+                              <span className="plan-badge">
+                                Plan ({plan.completed ? 'Complete' : 'In Progress'})
+                              </span>
+                            </div>
+                          </div>
+                          {plan.description && <p>{plan.description}</p>}
+                          {plan.tasks && plan.tasks.length > 0 && (
+                            <p className="plan-progress-detail">
+                              Progress: {plan.tasks.filter(t => t.completed).length}/{plan.tasks.length} tasks completed
+                            </p>
+                          )}
+                        </div>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            deletePlan(plan.id)
+                          }}
+                          className="delete-button"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                    
+                    {/* Render Tasks */}
+                    {getTasksForDate(selectedDate).map(task => {
                       const priorityStyles = getPriorityStyles(task.priority || 3)
                       const isDragging = draggedTask && draggedTask.id === task.id
                       return (
-                        <div key={`overdue-${task.id}`} className={`task-item overdue ${
+                        <div key={task.id} className={`task-item ${
                           task.completed ? 'completed' : ''
                         } ${
                           isDragging ? 'dragging' : ''
                         }`}
-                             style={{
-                               borderLeft: `4px solid ${priorityStyles.color}`,
-                               backgroundColor: priorityStyles.backgroundColor,
-                               opacity: isDragging ? 0.5 : 1
-                             }}
-                             draggable
-                             onDragStart={(e) => handleDragStart(e, task)}
-                             onDragEnd={handleDragEnd}
+                            style={{
+                              borderLeft: `4px solid ${priorityStyles.color}`,
+                              backgroundColor: priorityStyles.backgroundColor,
+                              opacity: isDragging ? 0.5 : 1
+                            }}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, task)}
+                            onDragEnd={handleDragEnd}
                         >
                           <input
                             type="checkbox"
@@ -494,7 +685,6 @@ function HomePage() {
                                 <span className="priority-badge" style={{ color: priorityStyles.color }}>
                                   P{task.priority || 3}
                                 </span>
-                                <span className="overdue-badge">OVERDUE</span>
                                 {task.repeat_type && task.repeat_type !== 'none' && (
                                   <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
                                     🔄
@@ -503,26 +693,23 @@ function HomePage() {
                               </div>
                             </div>
                             {task.description && <p>{task.description}</p>}
-                            <div className="task-meta">
-                              <span className="overdue-date">Due: {format(parseDateSafely(task.date), 'MMM d, yyyy')}</span>
-                              {task.repeat_type && task.repeat_type !== 'none' && (
-                                <div className="repeat-info">
-                                  <small>Repeats: {formatRepeatType(task.repeat_type)}
-                                    {task.repeat_until && ` until ${new Date(task.repeat_until).toLocaleDateString()}`}
-                                  </small>
-                                </div>
-                              )}
-                              {(task.start_time || task.finish_time) && (
-                                <span className="task-time">
-                                  {task.start_time && task.finish_time 
-                                    ? `${task.start_time} - ${task.finish_time}`
-                                    : task.start_time 
-                                      ? `Start: ${task.start_time}`
-                                      : `End: ${task.finish_time}`
-                                  }
-                                </span>
-                              )}
-                            </div>
+                            {task.repeat_type && task.repeat_type !== 'none' && (
+                              <div className="repeat-info">
+                                <small>Repeats: {formatRepeatType(task.repeat_type)}
+                                  {task.repeat_until && ` until ${new Date(task.repeat_until).toLocaleDateString()}`}
+                                </small>
+                              </div>
+                            )}
+                            {(task.start_time || task.finish_time) && (
+                              <span className="task-time">
+                                {task.start_time && task.finish_time 
+                                  ? `${task.start_time} - ${task.finish_time}`
+                                  : task.start_time 
+                                    ? `Start: ${task.start_time}`
+                                    : `End: ${task.finish_time}`
+                                }
+                              </span>
+                            )}
                           </div>
                           <div className="task-actions">
                             <button 
@@ -548,126 +735,12 @@ function HomePage() {
                         </div>
                       )
                     })}
-                  </div>
+                  </>
                 )}
-                
-                {/* Render Plans */}
-                {getPlansForDate(selectedDate).map(plan => (
-                  <div 
-                    key={`plan-${plan.id}`} 
-                    className={`plan-item ${
-                      plan.completed ? 'completed' : ''
-                    }`}
-                    onClick={() => handlePlanClick(plan)}
-                  >
-                    <div className="plan-content">
-                      <div className="plan-header-info">
-                        <h4>📋 {plan.title}</h4>
-                        <div className="plan-badges">
-                          <span className="plan-badge">
-                            Plan ({plan.completed ? 'Complete' : 'In Progress'})
-                          </span>
-                        </div>
-                      </div>
-                      {plan.description && <p>{plan.description}</p>}
-                    </div>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        deletePlan(plan.id)
-                      }}
-                      className="delete-button"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-                
-                {/* Render Tasks */}
-                {getTasksForDate(selectedDate).map(task => {
-                  const priorityStyles = getPriorityStyles(task.priority || 3)
-                  const isDragging = draggedTask && draggedTask.id === task.id
-                  return (
-                    <div key={task.id} className={`task-item ${
-                      task.completed ? 'completed' : ''
-                    } ${
-                      isDragging ? 'dragging' : ''
-                    }`}
-                         style={{
-                           borderLeft: `4px solid ${priorityStyles.color}`,
-                           backgroundColor: priorityStyles.backgroundColor,
-                           opacity: isDragging ? 0.5 : 1
-                         }}
-                         draggable
-                         onDragStart={(e) => handleDragStart(e, task)}
-                         onDragEnd={handleDragEnd}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={task.completed}
-                        onChange={() => toggleTask(task.id)}
-                      />
-                      <div className="task-content">
-                        <div className="task-header-info">
-                          <h4>{getRepeatIcon(task.repeat_type)} {task.title}</h4>
-                          <div className="task-badges">
-                            <span className="priority-badge" style={{ color: priorityStyles.color }}>
-                              P{task.priority || 3}
-                            </span>
-                            {task.repeat_type && task.repeat_type !== 'none' && (
-                              <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
-                                🔄
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {task.description && <p>{task.description}</p>}
-                        {task.repeat_type && task.repeat_type !== 'none' && (
-                          <div className="repeat-info">
-                            <small>Repeats: {formatRepeatType(task.repeat_type)}
-                              {task.repeat_until && ` until ${new Date(task.repeat_until).toLocaleDateString()}`}
-                            </small>
-                          </div>
-                        )}
-                        {(task.start_time || task.finish_time) && (
-                          <span className="task-time">
-                            {task.start_time && task.finish_time 
-                              ? `${task.start_time} - ${task.finish_time}`
-                              : task.start_time 
-                                ? `Start: ${task.start_time}`
-                                : `End: ${task.finish_time}`
-                            }
-                          </span>
-                        )}
-                      </div>
-                      <div className="task-actions">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleEditTask(task)
-                          }}
-                          className="edit-button"
-                          title="Edit task"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            deleteTask(task.id)
-                          }}
-                          className="delete-button"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })}
-              </>
+              </div>
             )}
           </div>
-        )}
+        </div>
       </div>
 
       {showTaskModal && (

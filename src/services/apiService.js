@@ -105,6 +105,7 @@ class ApiService {
     return data.task;
   }
 
+  // Update a task (this might affect plan completion status)
   async updateTask(id, updates) {
     const data = await this.apiCall(`/tasks/${id}`, {
       method: 'PUT',
