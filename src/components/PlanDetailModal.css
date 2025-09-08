@@ -45,20 +45,24 @@
 .share-button {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background-color: #2a2a2a;
-  color: #ccc;
+  gap: 8px; /* Add space between icon and text */
+  padding: 8px 16px; /* Increase padding for better click area */
+  border-radius: 6px; /* Slightly rounded corners */
+  background-color: #3b82f6; /* Blue background for visibility */
+  color: white; /* White text */
   border: none;
   cursor: pointer;
   transition: all 0.2s;
+  font-weight: 500; /* Bold text */
 }
 
 .share-button:hover {
-  background-color: #3a3a3a;
+  background-color: #2563eb; /* Darker blue on hover */
   color: #ffffff;
+}
+
+.share-button-text {
+  display: inline-block;
 }
 
 .plan-detail-modal .close-button {

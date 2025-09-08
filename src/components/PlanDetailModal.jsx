@@ -134,6 +134,7 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
                   title="Share plan"
                 >
                   <Share2 size={18} />
+                  <span className="share-button-text">Share</span>
                 </button>
               )}
               <button onClick={onClose} className="close-button">
