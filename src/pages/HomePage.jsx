@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns'
-import { Plus, ChevronLeft, ChevronRight, FolderPlus } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, FolderPlus, Edit2 } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import { usePlans } from '../hooks/usePlans'
 import TaskModal from '../components/TaskModal'
@@ -19,6 +19,7 @@ function HomePage() {
   const [draggedTask, setDraggedTask] = useState(null)
   const [dragOverDate, setDragOverDate] = useState(null)
   const [selectedPlan, setSelectedPlan] = useState(null)
+  const [editingTask, setEditingTask] = useState(null)
   const { tasks, loading, addTask, toggleTask, deleteTask, updateTask } = useTasks()
   const { plans, addPlan, deletePlan, completeCurrentTask, getCurrentTask, addTaskToPlan, updatePlanTask, deletePlanTask } = usePlans()
 
@@ -78,6 +79,37 @@ function HomePage() {
       console.error('Failed to add task:', error)
       // Could add error handling UI here
     }
+  }
+
+  const handleEditTask = (task) => {
+    setEditingTask(task)
+    setSelectedDate(parseDateSafely(task.date))
+    setShowTaskModal(true)
+  }
+
+  const handleSaveTask = async (taskIdOrData, updateData = null) => {
+    try {
+      if (editingTask && updateData) {
+        // This is an edit operation
+        await updateTask(taskIdOrData, updateData)
+        setEditingTask(null)
+      } else {
+        // This is an add operation
+        await addTask({
+          ...taskIdOrData,
+          date: formatDateForAPI(selectedDate)
+        })
+      }
+      setShowTaskModal(false)
+    } catch (error) {
+      console.error('Failed to save task:', error)
+      // Could add error handling UI here
+    }
+  }
+
+  const handleCloseTaskModal = () => {
+    setShowTaskModal(false)
+    setEditingTask(null)
   }
 
   const handleAddPlan = async (planData) => {
@@ -498,12 +530,27 @@ function HomePage() {
                           </span>
                         )}
                       </div>
-                      <button 
-                        onClick={() => deleteTask(task.id)}
-                        className="delete-button"
-                      >
-                        ×
-                      </button>
+                      <div className="task-actions">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleEditTask(task)
+                          }}
+                          className="edit-button"
+                          title="Edit task"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            deleteTask(task.id)
+                          }}
+                          className="delete-button"
+                        >
+                          ×
+                        </button>
+                      </div>
                     </div>
                   )
                 })}
@@ -515,9 +562,11 @@ function HomePage() {
 
       {showTaskModal && (
         <TaskModal
-          onClose={() => setShowTaskModal(false)}
-          onSave={handleAddTask}
+          onClose={handleCloseTaskModal}
+          onSave={handleSaveTask}
           selectedDate={selectedDate}
+          task={editingTask}
+          isEditing={!!editingTask}
         />
       )}
 

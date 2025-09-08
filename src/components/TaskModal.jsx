@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { X } from 'lucide-react'
 import { REPEAT_OPTIONS } from '../utils/repeatUtils'
 import './TaskModal.css'
 
-function TaskModal({ onClose, onSave, selectedDate }) {
+function TaskModal({ onClose, onSave, selectedDate, task = null, isEditing = false }) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -14,6 +14,21 @@ function TaskModal({ onClose, onSave, selectedDate }) {
     repeat_type: 'none',
     repeat_until: ''
   })
+
+  // Initialize form data when editing
+  useEffect(() => {
+    if (isEditing && task) {
+      setFormData({
+        title: task.title || '',
+        description: task.description || '',
+        start_time: task.start_time || '',
+        finish_time: task.finish_time || '',
+        priority: task.priority || 3,
+        repeat_type: task.repeat_type || 'none',
+        repeat_until: task.repeat_until || ''
+      })
+    }
+  }, [isEditing, task])
 
   const priorityOptions = [
     { value: 1, label: 'P1 - Urgent', color: '#dc2626' },
@@ -27,8 +42,15 @@ function TaskModal({ onClose, onSave, selectedDate }) {
     e.preventDefault()
     if (!formData.title.trim()) return
     
-    onSave(formData)
-    setFormData({ title: '', description: '', start_time: '', finish_time: '', priority: 3, repeat_type: 'none', repeat_until: '' })
+    if (isEditing) {
+      onSave(task.id, formData)
+    } else {
+      onSave(formData)
+    }
+    
+    if (!isEditing) {
+      setFormData({ title: '', description: '', start_time: '', finish_time: '', priority: 3, repeat_type: 'none', repeat_until: '' })
+    }
   }
 
   const handleChange = (field, value) => {
@@ -39,7 +61,7 @@ function TaskModal({ onClose, onSave, selectedDate }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Add New Task</h2>
+          <h2>{isEditing ? 'Edit Task' : 'Add New Task'}</h2>
           <button onClick={onClose} className="close-button">
             <X size={20} />
           </button>
@@ -146,7 +168,7 @@ function TaskModal({ onClose, onSave, selectedDate }) {
               Cancel
             </button>
             <button type="submit" className="save-button">
-              Save Task
+              {isEditing ? 'Update Task' : 'Save Task'}
             </button>
           </div>
         </form>

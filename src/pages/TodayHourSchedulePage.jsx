@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { format, isToday } from 'date-fns'
-import { Plus, Clock, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Clock, ChevronDown, ChevronUp, Edit2 } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import TaskModal from '../components/TaskModal'
 import { getTodayDateString, getTomorrowDateString, parseDateSafely } from '../utils/dateUtils'
@@ -14,7 +14,8 @@ function TodayHourSchedulePage() {
   const [isLateHoursExpanded, setIsLateHoursExpanded] = useState(false)
   const [hoveredTask, setHoveredTask] = useState(null)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
-  const { tasks, loading, addTask, toggleTask, deleteTask } = useTasks()
+  const [editingTask, setEditingTask] = useState(null)
+  const { tasks, loading, addTask, toggleTask, deleteTask, updateTask } = useTasks()
   const today = new Date()
 
   const todayTasks = tasks
@@ -46,6 +47,36 @@ function TodayHourSchedulePage() {
       console.error('Failed to add task:', error)
       // Could add error handling UI here
     }
+  }
+
+  const handleEditTask = (task) => {
+    setEditingTask(task)
+    setShowTaskModal(true)
+  }
+
+  const handleSaveTask = async (taskIdOrData, updateData = null) => {
+    try {
+      if (editingTask && updateData) {
+        // This is an edit operation
+        await updateTask(taskIdOrData, updateData)
+        setEditingTask(null)
+      } else {
+        // This is an add operation
+        await addTask({
+          ...taskIdOrData,
+          date: getTomorrowDateString()
+        })
+      }
+      setShowTaskModal(false)
+    } catch (error) {
+      console.error('Failed to save task:', error)
+      // Could add error handling UI here
+    }
+  }
+
+  const handleCloseTaskModal = () => {
+    setShowTaskModal(false)
+    setEditingTask(null)
   }
 
   // Generate hour slots from 12 AM to 11 PM (24 hours)
@@ -372,12 +403,27 @@ function TodayHourSchedulePage() {
                                 )}
                               </div>
                             </div>
-                            <button 
-                              onClick={() => deleteTask(task.id)}
-                              className="delete-button"
-                            >
-                              ×
-                            </button>
+                            <div className="task-actions">
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEditTask(task)
+                                }}
+                                className="edit-task-button"
+                                title="Edit task"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  deleteTask(task.id)
+                                }}
+                                className="delete-button"
+                              >
+                                ×
+                              </button>
+                            </div>
                           </div>
                           {task.description && positioning.height > 60 && !isShortDuration && (
                             <p className={`task-description ${task.completed ? 'completed-text' : ''}`}>
@@ -523,9 +569,11 @@ function TodayHourSchedulePage() {
 
       {showTaskModal && (
         <TaskModal
-          onClose={() => setShowTaskModal(false)}
-          onSubmit={handleAddTask}
-          initialDate={format(today, 'yyyy-MM-dd')}
+          onClose={handleCloseTaskModal}
+          onSave={handleSaveTask}
+          selectedDate={today}
+          task={editingTask}
+          isEditing={!!editingTask}
         />
       )}
     </div>

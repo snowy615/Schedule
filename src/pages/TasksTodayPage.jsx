@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { format, isToday } from 'date-fns'
-import { Plus, Clock } from 'lucide-react'
+import { Plus, Clock, Edit2 } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import TaskModal from '../components/TaskModal'
 import { getTodayDateString, getTomorrowDateString, parseDateSafely } from '../utils/dateUtils'
@@ -10,7 +10,8 @@ import './TasksTodayPage.css'
 
 function TasksTodayPage() {
   const [showTaskModal, setShowTaskModal] = useState(false)
-  const { tasks, loading, addTask, toggleTask, deleteTask } = useTasks()
+  const [editingTask, setEditingTask] = useState(null)
+  const { tasks, loading, addTask, toggleTask, deleteTask, updateTask } = useTasks()
   const today = new Date()
 
   const todayTasks = tasks
@@ -42,6 +43,36 @@ function TasksTodayPage() {
       console.error('Failed to add task:', error)
       // Could add error handling UI here
     }
+  }
+
+  const handleEditTask = (task) => {
+    setEditingTask(task)
+    setShowTaskModal(true)
+  }
+
+  const handleSaveTask = async (taskIdOrData, updateData = null) => {
+    try {
+      if (editingTask && updateData) {
+        // This is an edit operation
+        await updateTask(taskIdOrData, updateData)
+        setEditingTask(null)
+      } else {
+        // This is an add operation
+        await addTask({
+          ...taskIdOrData,
+          date: getTomorrowDateString()
+        })
+      }
+      setShowTaskModal(false)
+    } catch (error) {
+      console.error('Failed to save task:', error)
+      // Could add error handling UI here
+    }
+  }
+
+  const handleCloseTaskModal = () => {
+    setShowTaskModal(false)
+    setEditingTask(null)
   }
 
   const completedTasks = todayTasks.filter(task => task.completed)
@@ -148,12 +179,27 @@ function TasksTodayPage() {
                             )}
                           </div>
                         </div>
-                        <button 
-                          onClick={() => deleteTask(task.id)}
-                          className="delete-button"
-                        >
-                          ×
-                        </button>
+                        <div className="task-actions">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEditTask(task)
+                            }}
+                            className="edit-button"
+                            title="Edit task"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              deleteTask(task.id)
+                            }}
+                            className="delete-button"
+                          >
+                            ×
+                          </button>
+                        </div>
                       </div>
                       {task.description && (
                         <p className="task-description">{task.description}</p>
@@ -204,12 +250,27 @@ function TasksTodayPage() {
                                 )}
                               </div>
                             </div>
-                            <button 
-                              onClick={() => deleteTask(task.id)}
-                              className="delete-button"
-                            >
-                              ×
-                            </button>
+                            <div className="task-actions">
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEditTask(task)
+                                }}
+                                className="edit-button"
+                                title="Edit task"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  deleteTask(task.id)
+                                }}
+                                className="delete-button"
+                              >
+                                ×
+                              </button>
+                            </div>
                           </div>
                           {task.description && (
                             <p className="task-description">{task.description}</p>
@@ -231,9 +292,11 @@ function TasksTodayPage() {
 
       {showTaskModal && (
         <TaskModal
-          onClose={() => setShowTaskModal(false)}
-          onSave={handleAddTask}
+          onClose={handleCloseTaskModal}
+          onSave={handleSaveTask}
           selectedDate={today}
+          task={editingTask}
+          isEditing={!!editingTask}
         />
       )}
     </div>

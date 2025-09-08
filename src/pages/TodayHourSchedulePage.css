@@ -282,6 +282,30 @@
   flex: 1;
 }
 
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.edit-task-button {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-task-button:hover {
+  background: rgba(100, 108, 255, 0.1);
+  color: #646cff;
+}
+
 .task-title {
   margin: 0 0 0.5rem 0;
   color: #ffffff;
@@ -321,13 +345,16 @@
   font-size: 1.2rem;
   padding: 0.25rem;
   border-radius: 4px;
-  transition: color 0.2s;
+  transition: all 0.2s;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .delete-button:hover {
-  color: #ff6b6b;
   background: rgba(255, 107, 107, 0.1);
+  color: #ff6b6b;
 }
 
 .task-description {
@@ -412,6 +439,10 @@
   }
   
   .hour-task-card.short-duration .delete-button {
+    font-size: 0.9rem;
+  }
+  
+  .hour-task-card.short-duration .edit-task-button {
     font-size: 0.9rem;
   }
   
