@@ -4,51 +4,29 @@
     <title>API Test</title>
 </head>
 <body>
-    <h1>API Connection Test</h1>
-    <button onclick="testLogin()">Test Login</button>
-    <button onclick="testHealth()">Test Health</button>
+    <h1>API Test</h1>
+    <button onclick="testSharePlan()">Test Share Plan</button>
     <div id="result"></div>
 
     <script>
-        const API_BASE_URL = 'http://localhost:3001/api';
-        
-        async function testHealth() {
+        async function testSharePlan() {
             try {
-                const response = await fetch('http://localhost:3001/health');
-                const data = await response.json();
-                document.getElementById('result').innerHTML = 
-                    '<p style="color: green;">Health check successful: ' + JSON.stringify(data) + '</p>';
-            } catch (error) {
-                document.getElementById('result').innerHTML = 
-                    '<p style="color: red;">Health check failed: ' + error.message + '</p>';
-            }
-        }
-        
-        async function testLogin() {
-            try {
-                const response = await fetch(API_BASE_URL + '/auth/login', {
+                const response = await fetch('http://localhost:3001/api/plans/1/share', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': 'Bearer YOUR_TOKEN_HERE'
                     },
                     body: JSON.stringify({
-                        email: 'demo@example.com',
-                        password: 'demo123'
+                        email: 'test@example.com',
+                        permissions: 'read'
                     })
                 });
                 
                 const data = await response.json();
-                if (response.ok) {
-                    document.getElementById('result').innerHTML = 
-                        '<p style="color: green;">Login successful: ' + JSON.stringify(data.user) + '</p>';
-                } else {
-                    document.getElementById('result').innerHTML = 
-                        '<p style="color: red;">Login failed: ' + data.error + '</p>';
-                }
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
             } catch (error) {
-                document.getElementById('result').innerHTML = 
-                    '<p style="color: red;">Login failed: ' + error.message + '</p>';
-                console.error('Login error:', error);
+                document.getElementById('result').innerHTML = '<pre>Error: ' + error.message + '</pre>';
             }
         }
     </script>

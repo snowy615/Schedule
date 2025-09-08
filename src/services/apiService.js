@@ -82,6 +82,12 @@ class ApiService {
     return this.apiCall('/auth/me');
   }
 
+  // User lookup method
+  async lookupUser(email) {
+    const data = await this.apiCall(`/auth/lookup/${encodeURIComponent(email)}`);
+    return data.user;
+  }
+
   logout() {
     this.setToken(null);
   }
@@ -197,6 +203,30 @@ class ApiService {
       method: 'DELETE',
     });
     return data.plan;
+  }
+
+  // Share a plan with another user
+  async sharePlan(planId, email, permissions = 'read') {
+    const data = await this.apiCall(`/plans/${planId}/share`, {
+      method: 'POST',
+      body: JSON.stringify({ email, permissions }),
+    });
+    return data;
+  }
+
+  // Unshare a plan with a user
+  async unsharePlan(planId, email) {
+    const data = await this.apiCall(`/plans/${planId}/unshare`, {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+    return data;
+  }
+
+  // Get users a plan is shared with
+  async getSharedUsers(planId) {
+    const data = await this.apiCall(`/plans/${planId}/shared-users`);
+    return data.sharedUsers;
   }
 }
 

@@ -33,46 +33,9 @@ router.get('/date/:date', async (req, res) => {
 // Create a new plan
 router.post('/', async (req, res) => {
   try {
-    const { title, description, date, tasks } = req.body;
-
-    // Validate required fields
-    if (!title || !date) {
-      return res.status(400).json({ error: 'Title and date are required' });
-    }
-
-    // Validate date format (YYYY-MM-DD)
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(date)) {
-      return res.status(400).json({ error: 'Date must be in YYYY-MM-DD format' });
-    }
-
-    // Validate tasks array
-    if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
-      return res.status(400).json({ error: 'At least one task is required for a plan' });
-    }
-
-    // Validate each task
-    for (const task of tasks) {
-      if (!task.title || typeof task.title !== 'string' || task.title.trim().length === 0) {
-        return res.status(400).json({ error: 'Each task must have a valid title' });
-      }
-      
-      if (task.priority !== undefined && (task.priority < 1 || task.priority > 5 || !Number.isInteger(task.priority))) {
-        return res.status(400).json({ error: 'Task priority must be an integer between 1 and 5' });
-      }
-    }
-
-    const plan = await Plan.create(req.user.id, {
-      title,
-      description,
-      date,
-      tasks
-    });
-
-    res.status(201).json({
-      message: 'Plan created successfully',
-      plan
-    });
+    const planData = req.body;
+    const plan = await Plan.create(req.user.id, planData);
+    res.status(201).json({ plan });
   } catch (error) {
     console.error('Create plan error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -83,16 +46,9 @@ router.post('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const plan = await Plan.findById(req.params.id);
-    
     if (!plan) {
       return res.status(404).json({ error: 'Plan not found' });
     }
-
-    // Check if plan belongs to current user
-    if (plan.user_id !== req.user.id) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-
     res.json({ plan });
   } catch (error) {
     console.error('Get plan error:', error);
@@ -103,19 +59,11 @@ router.get('/:id', async (req, res) => {
 // Get current active task for a plan
 router.get('/:id/current-task', async (req, res) => {
   try {
-    const plan = await Plan.findById(req.params.id);
-    
-    if (!plan) {
-      return res.status(404).json({ error: 'Plan not found' });
+    const task = await Plan.getCurrentTask(req.params.id);
+    if (!task) {
+      return res.status(404).json({ error: 'Current task not found' });
     }
-
-    // Check if plan belongs to current user
-    if (plan.user_id !== req.user.id) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-
-    const currentTask = await Plan.getCurrentTask(req.params.id);
-    res.json({ task: currentTask });
+    res.json({ task });
   } catch (error) {
     console.error('Get current task error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -157,35 +105,10 @@ router.delete('/:id', async (req, res) => {
 // Add a task to a plan
 router.post('/:id/tasks', async (req, res) => {
   try {
-    const { title, description, priority, date } = req.body;
-    
-    // Validate required fields
-    if (!title || typeof title !== 'string' || title.trim().length === 0) {
-      return res.status(400).json({ error: 'Task title is required' });
-    }
-    
-    if (priority !== undefined && (priority < 1 || priority > 5 || !Number.isInteger(priority))) {
-      return res.status(400).json({ error: 'Priority must be an integer between 1 and 5' });
-    }
-    
-    if (date !== undefined) {
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(date)) {
-        return res.status(400).json({ error: 'Date must be in YYYY-MM-DD format' });
-      }
-    }
-    
-    const updatedPlan = await Plan.addTask(req.params.id, req.user.id, {
-      title: title.trim(),
-      description: description ? description.trim() : null,
-      priority: priority || 3,
-      date: date
-    });
-    
-    res.status(201).json({
-      message: 'Task added successfully',
-      plan: updatedPlan
-    });
+    const { id: planId } = req.params;
+    const taskData = req.body;
+    const updatedPlan = await Plan.addTask(planId, req.user.id, taskData);
+    res.status(201).json({ plan: updatedPlan });
   } catch (error) {
     if (error.message === 'Plan not found or unauthorized') {
       return res.status(404).json({ error: error.message });
@@ -198,41 +121,16 @@ router.post('/:id/tasks', async (req, res) => {
 // Update a task in a plan
 router.put('/:id/tasks/:taskId', async (req, res) => {
   try {
-    const { title, description, priority, date } = req.body;
-    
-    // Validate fields if provided
-    if (title !== undefined && (typeof title !== 'string' || title.trim().length === 0)) {
-      return res.status(400).json({ error: 'Task title cannot be empty' });
-    }
-    
-    if (priority !== undefined && (priority < 1 || priority > 5 || !Number.isInteger(priority))) {
-      return res.status(400).json({ error: 'Priority must be an integer between 1 and 5' });
-    }
-    
-    if (date !== undefined) {
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(date)) {
-        return res.status(400).json({ error: 'Date must be in YYYY-MM-DD format' });
-      }
-    }
-    
-    const updatedPlan = await Plan.updateTask(req.params.id, req.params.taskId, req.user.id, {
-      ...(title !== undefined && { title: title.trim() }),
-      ...(description !== undefined && { description: description ? description.trim() : null }),
-      ...(priority !== undefined && { priority }),
-      ...(date !== undefined && { date })
-    });
-    
-    res.json({
-      message: 'Task updated successfully',
-      plan: updatedPlan
-    });
+    const { id: planId, taskId } = req.params;
+    const updates = req.body;
+    const updatedPlan = await Plan.updateTask(planId, taskId, req.user.id, updates);
+    res.json({ plan: updatedPlan });
   } catch (error) {
     if (error.message === 'Plan not found or unauthorized' || 
         error.message === 'Task not found or does not belong to plan') {
       return res.status(404).json({ error: error.message });
     }
-    console.error('Update task in plan error:', error);
+    console.error('Update plan task error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -240,18 +138,114 @@ router.put('/:id/tasks/:taskId', async (req, res) => {
 // Delete a task from a plan
 router.delete('/:id/tasks/:taskId', async (req, res) => {
   try {
-    const updatedPlan = await Plan.deleteTask(req.params.id, req.params.taskId, req.user.id);
-    res.json({
-      message: 'Task deleted successfully',
-      plan: updatedPlan
-    });
+    const { id: planId, taskId } = req.params;
+    const updatedPlan = await Plan.deleteTask(planId, taskId, req.user.id);
+    res.json({ plan: updatedPlan });
   } catch (error) {
     if (error.message === 'Plan not found or unauthorized' || 
         error.message === 'Task not found or does not belong to plan' ||
         error.message === 'Cannot delete task: plan must have at least one task') {
       return res.status(404).json({ error: error.message });
     }
-    console.error('Delete task from plan error:', error);
+    console.error('Delete plan task error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Share a plan with another user
+router.post('/:id/share', async (req, res) => {
+  try {
+    const { email, permissions } = req.body;
+    
+    // Validate required fields
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+    
+    // Get user ID by email
+    const db = require('../database').getDB();
+    db.get('SELECT id FROM users WHERE email = ?', [email], async (err, user) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+      
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // Share the plan
+      const result = await Plan.sharePlan(
+        req.params.id, 
+        req.user.id, 
+        user.id, 
+        permissions || 'read'
+      );
+      
+      res.json(result);
+    });
+  } catch (error) {
+    if (error.message === 'Plan not found or unauthorized') {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message === 'Cannot share plan with yourself') {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Share plan error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Unshare a plan with a user
+router.post('/:id/unshare', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    // Validate required fields
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+    
+    // Get user ID by email
+    const db = require('../database').getDB();
+    db.get('SELECT id FROM users WHERE email = ?', [email], async (err, user) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+      
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // Unshare the plan
+      const result = await Plan.unsharePlan(
+        req.params.id, 
+        req.user.id, 
+        user.id
+      );
+      
+      res.json(result);
+    });
+  } catch (error) {
+    if (error.message === 'Plan not found or unauthorized') {
+      return res.status(404).json({ error: error.message });
+    }
+    console.error('Unshare plan error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get users a plan is shared with
+router.get('/:id/shared-users', async (req, res) => {
+  try {
+    const sharedUsers = await Plan.getSharedUsers(req.params.id, req.user.id);
+    res.json({ sharedUsers });
+  } catch (error) {
+    if (error.message === 'Plan not found or unauthorized') {
+      return res.status(404).json({ error: error.message });
+    }
+    console.error('Get shared users error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

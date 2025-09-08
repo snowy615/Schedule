@@ -150,9 +150,9 @@ function HomePage() {
 
   const handlePlanClick = async (plan) => {
     try {
-      // Get the current task for this plan
-      const currentTask = await getCurrentTask(plan.id)
-      setSelectedPlan({ ...plan, currentTask })
+      // For shared plans, we don't need to fetch the current task separately
+      // as it's already included in the plan data
+      setSelectedPlan(plan);
     } catch (error) {
       console.error('Failed to get plan details:', error)
     }

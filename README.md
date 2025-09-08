@@ -30,6 +30,11 @@ A modern, responsive web application for managing your daily tasks and schedule 
 - **Persistent Storage** - Your data is saved locally and per-user
 - **Responsive Design** - Works great on desktop and mobile
 
+### 📋 **Plan Management**
+- **Multi-step Plans** - Create detailed plans with multiple sequential tasks
+- **Progress Tracking** - Track completion of individual tasks within plans
+- **Plan Sharing** - Share plans with other users (read-only)
+
 ## Getting Started
 
 ### Prerequisites
@@ -76,6 +81,12 @@ A modern, responsive web application for managing your daily tasks and schedule 
 4. **Delete Tasks** - Click the × button to remove tasks
 5. **Switch Views** - Use Calendar for monthly view, Today for daily focus
 
+### Managing Plans
+1. **Create Plans** - Click "Create Plan" to create a new multi-step plan
+2. **Add Tasks** - Add sequential tasks to your plan
+3. **Complete Tasks** - Complete tasks in order to progress through the plan
+4. **Share Plans** - Share plans with other users through the plan detail view
+
 ### Navigation
 - **Calendar** - Monthly calendar with task overview
 - **Today** - Focus on today's schedule and progress
@@ -112,3 +123,4 @@ This project is licensed under the MIT License.
 - [ ] Export/Import functionality
 - [ ] Dark/Light theme toggle
 - [ ] Mobile app version
+- [x] Plan sharing functionality

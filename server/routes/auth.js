@@ -1,6 +1,6 @@
 const express = require('express');
 const User = require('../models/User');
-const { generateToken } = require('../middleware/auth');
+const { generateToken, verifyToken } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -96,6 +96,36 @@ router.get('/me', require('../middleware/auth').verifyToken, async (req, res) =>
     });
   } catch (error) {
     console.error('Get user error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Lookup user by email (protected route)
+router.get('/lookup/:email', verifyToken, async (req, res) => {
+  try {
+    const { email } = req.params;
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+    
+    // Find user by email
+    const user = await User.findByEmail(email);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Don't return sensitive information like password
+    const { password, ...userWithoutPassword } = user;
+    
+    res.json({
+      user: userWithoutPassword
+    });
+  } catch (error) {
+    console.error('User lookup error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

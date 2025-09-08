@@ -132,18 +132,20 @@ class Plan {
     });
   }
 
-  // Get all plans for a user with their tasks
+  // Get all plans for a user with their tasks (including shared plans)
   static async findByUserId(userId) {
     return new Promise(async (resolve, reject) => {
       const db = database.getDB();
       
       try {
-        // Get all plans for the user
+        // Get all plans for the user (owned + shared)
         db.all(`
-          SELECT * FROM plans 
-          WHERE user_id = ? 
-          ORDER BY date ASC, created_at ASC
-        `, [userId], async (err, planRows) => {
+          SELECT p.*, sp.permissions as shared_permissions
+          FROM plans p
+          LEFT JOIN shared_plans sp ON p.id = sp.plan_id AND sp.shared_with_user_id = ?
+          WHERE p.user_id = ? OR sp.shared_with_user_id = ?
+          ORDER BY p.date ASC, p.created_at ASC
+        `, [userId, userId, userId], async (err, planRows) => {
           if (err) {
             reject(err);
             return;
@@ -184,7 +186,9 @@ class Plan {
             const plansWithTasks = planRows.map(plan => ({
               ...plan,
               completed: Boolean(plan.completed),
-              tasks: tasksByPlanId[plan.id] || []
+              tasks: tasksByPlanId[plan.id] || [],
+              is_shared: plan.user_id !== userId, // Mark if this is a shared plan
+              shared_permissions: plan.shared_permissions || null
             }));
             
             resolve(plansWithTasks);
@@ -196,17 +200,19 @@ class Plan {
     });
   }
 
-  // Get plans for a specific date with their tasks
+  // Get plans for a specific date with their tasks (including shared plans)
   static async findByUserAndDate(userId, date) {
     return new Promise((resolve, reject) => {
       const db = database.getDB();
       
-      // Get plans for the specific date
+      // Get plans for the specific date (owned + shared)
       db.all(`
-        SELECT * FROM plans 
-        WHERE user_id = ? AND date = ? 
-        ORDER BY created_at ASC
-      `, [userId, date], (err, planRows) => {
+        SELECT p.*, sp.permissions as shared_permissions
+        FROM plans p
+        LEFT JOIN shared_plans sp ON p.id = sp.plan_id AND sp.shared_with_user_id = ?
+        WHERE (p.user_id = ? OR sp.shared_with_user_id = ?) AND p.date = ?
+        ORDER BY p.created_at ASC
+      `, [userId, userId, userId, date], (err, planRows) => {
         if (err) {
           reject(err);
           return;
@@ -247,7 +253,9 @@ class Plan {
           const plansWithTasks = planRows.map(plan => ({
             ...plan,
             completed: Boolean(plan.completed),
-            tasks: tasksByPlanId[plan.id] || []
+            tasks: tasksByPlanId[plan.id] || [],
+            is_shared: plan.user_id !== userId, // Mark if this is a shared plan
+            shared_permissions: plan.shared_permissions || null
           }));
           
           resolve(plansWithTasks);
@@ -288,7 +296,7 @@ class Plan {
     });
   }
 
-  // Complete current task and move to next
+  // Complete current task and move to next (only for plan owners)
   static async completeCurrentTask(planId, userId) {
     return new Promise((resolve, reject) => {
       const db = database.getDB();
@@ -387,7 +395,7 @@ class Plan {
     });
   }
 
-  // Delete a plan and all its tasks
+  // Delete a plan (only for plan owners)
   static async delete(id, userId) {
     return new Promise((resolve, reject) => {
       const db = database.getDB();
@@ -430,7 +438,7 @@ class Plan {
     });
   }
 
-  // Add a task to an existing plan
+  // Add a task to an existing plan (only for plan owners)
   static async addTask(planId, userId, taskData) {
     return new Promise((resolve, reject) => {
       const db = database.getDB();
@@ -487,7 +495,7 @@ class Plan {
     });
   }
 
-  // Update a task in a plan
+  // Update a task in a plan (only for plan owners)
   static async updateTask(planId, taskId, userId, updates) {
     return new Promise((resolve, reject) => {
       const db = database.getDB();
@@ -589,7 +597,7 @@ class Plan {
     });
   }
 
-  // Delete a task from a plan
+  // Delete a task from a plan (only for plan owners)
   static async deleteTask(planId, taskId, userId) {
     return new Promise((resolve, reject) => {
       const db = database.getDB();
@@ -693,6 +701,123 @@ class Plan {
               });
             });
           });
+        });
+      });
+    });
+  }
+
+  // Share a plan with another user
+  static async sharePlan(planId, ownerId, sharedWithUserId, permissions = 'read') {
+    return new Promise((resolve, reject) => {
+      const db = database.getDB();
+      
+      // Verify plan exists and belongs to owner
+      db.get('SELECT * FROM plans WHERE id = ? AND user_id = ?', [planId, ownerId], (err, plan) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        if (!plan) {
+          reject(new Error('Plan not found or unauthorized'));
+          return;
+        }
+        
+        // Check if trying to share with self
+        if (ownerId === sharedWithUserId) {
+          reject(new Error('Cannot share plan with yourself'));
+          return;
+        }
+        
+        // Insert or update shared plan record
+        db.run(`
+          INSERT OR REPLACE INTO shared_plans 
+          (plan_id, owner_id, shared_with_user_id, permissions) 
+          VALUES (?, ?, ?, ?)
+        `, [planId, ownerId, sharedWithUserId, permissions], function(insertErr) {
+          if (insertErr) {
+            reject(insertErr);
+          } else {
+            resolve({
+              message: 'Plan shared successfully',
+              shared_plan: {
+                id: this.lastID,
+                plan_id: planId,
+                owner_id: ownerId,
+                shared_with_user_id: sharedWithUserId,
+                permissions
+              }
+            });
+          }
+        });
+      });
+    });
+  }
+
+  // Unshare a plan with a user
+  static async unsharePlan(planId, ownerId, sharedWithUserId) {
+    return new Promise((resolve, reject) => {
+      const db = database.getDB();
+      
+      // Verify plan exists and belongs to owner
+      db.get('SELECT * FROM plans WHERE id = ? AND user_id = ?', [planId, ownerId], (err, plan) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        if (!plan) {
+          reject(new Error('Plan not found or unauthorized'));
+          return;
+        }
+        
+        // Delete shared plan record
+        db.run(`
+          DELETE FROM shared_plans 
+          WHERE plan_id = ? AND owner_id = ? AND shared_with_user_id = ?
+        `, [planId, ownerId, sharedWithUserId], function(deleteErr) {
+          if (deleteErr) {
+            reject(deleteErr);
+          } else {
+            resolve({
+              message: 'Plan unshared successfully',
+              changes: this.changes
+            });
+          }
+        });
+      });
+    });
+  }
+
+  // Get users a plan is shared with
+  static async getSharedUsers(planId, ownerId) {
+    return new Promise((resolve, reject) => {
+      const db = database.getDB();
+      
+      // Verify plan exists and belongs to owner
+      db.get('SELECT * FROM plans WHERE id = ? AND user_id = ?', [planId, ownerId], (err, plan) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        if (!plan) {
+          reject(new Error('Plan not found or unauthorized'));
+          return;
+        }
+        
+        // Get shared users
+        db.all(`
+          SELECT u.id, u.email, u.name, sp.permissions, sp.created_at
+          FROM shared_plans sp
+          JOIN users u ON sp.shared_with_user_id = u.id
+          WHERE sp.plan_id = ?
+        `, [planId], (sharedErr, sharedUsers) => {
+          if (sharedErr) {
+            reject(sharedErr);
+          } else {
+            resolve(sharedUsers);
+          }
         });
       });
     });

@@ -1,0 +1,264 @@
+.share-plan-modal {
+  max-width: 500px;
+  width: 90%;
+}
+
+.share-plan-modal .modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.share-plan-modal .modal-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.share-plan-modal .modal-body {
+  padding: 20px;
+}
+
+.plan-info {
+  margin-bottom: 24px;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.plan-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.25rem;
+  color: #1f2937;
+}
+
+.plan-info p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.share-form .form-group {
+  margin-bottom: 20px;
+}
+
+.share-form .form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.share-form .form-group input,
+.share-form .form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.share-form .form-group input:focus,
+.share-form .form-group select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.user-preview {
+  background-color: #eff6ff;
+  border: 1px solid #dbeafe;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 20px;
+}
+
+.user-preview.loading {
+  background-color: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+.user-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #1e40af;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.user-preview.loading .user-preview-header {
+  color: #6b7280;
+}
+
+.user-preview-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-preview-name {
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.user-preview-email {
+  font-size: 0.9rem;
+  color: #3b82f6;
+}
+
+.user-not-registered {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.permission-note {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.error-message {
+  color: #ef4444;
+  background-color: #fef2f2;
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.form-actions .cancel-button,
+.form-actions .share-button {
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.form-actions .cancel-button {
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.form-actions .cancel-button:hover {
+  background-color: #e5e7eb;
+}
+
+.form-actions .share-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+}
+
+.form-actions .share-button:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.form-actions .share-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.shared-users-section {
+  margin-top: 32px;
+}
+
+.shared-users-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 1.1rem;
+  color: #1f2937;
+}
+
+.shared-users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shared-user-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.user-details {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.user-email {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.shared-date {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.permission-badge {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.unshare-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #fee2e2;
+  color: #dc2626;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.unshare-button:hover {
+  background-color: #fecaca;
+}

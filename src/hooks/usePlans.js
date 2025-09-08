@@ -135,6 +135,51 @@ export function usePlans() {
     }
   }
 
+  // Share a plan with another user
+  const sharePlan = async (planId, email, permissions = 'read') => {
+    if (!user) return
+    
+    try {
+      const result = await apiService.sharePlan(planId, email, permissions)
+      // Refresh plans to show updated sharing status
+      const plansData = await apiService.getPlans()
+      setPlans(plansData)
+      return result
+    } catch (error) {
+      console.error('Failed to share plan:', error)
+      throw error
+    }
+  }
+
+  // Unshare a plan with a user
+  const unsharePlan = async (planId, email) => {
+    if (!user) return
+    
+    try {
+      const result = await apiService.unsharePlan(planId, email)
+      // Refresh plans to show updated sharing status
+      const plansData = await apiService.getPlans()
+      setPlans(plansData)
+      return result
+    } catch (error) {
+      console.error('Failed to unshare plan:', error)
+      throw error
+    }
+  }
+
+  // Get users a plan is shared with
+  const getSharedUsers = async (planId) => {
+    if (!user) return []
+    
+    try {
+      const sharedUsers = await apiService.getSharedUsers(planId)
+      return sharedUsers
+    } catch (error) {
+      console.error('Failed to get shared users:', error)
+      throw error
+    }
+  }
+
   return {
     plans,
     loading,
@@ -144,6 +189,9 @@ export function usePlans() {
     getCurrentTask,
     addTaskToPlan,
     updatePlanTask,
-    deletePlanTask
+    deletePlanTask,
+    sharePlan,
+    unsharePlan,
+    getSharedUsers
   }
 }

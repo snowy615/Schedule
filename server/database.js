@@ -96,23 +96,45 @@ class Database {
               return;
             }
             
-            // Migrate existing data from 'time' column to 'start_time'
-            this.migrateTimeColumn().then(() => {
-              // Add priority column to existing tables if needed
-              return this.addPriorityColumn();
-            }).then(() => {
-              // Add repetition columns to existing tables if needed
-              return this.addRepetitionColumns();
-            }).then(() => {
-              // Add plan columns to existing tables if needed
-              return this.addPlanColumns();
-            }).then(() => {
-              // Add attachments column to existing tables if needed
-              return this.addAttachmentsColumn();
-            }).then(() => {
-              console.log('Database tables created successfully');
-              resolve();
-            }).catch(reject);
+            // Create shared_plans table for plan sharing functionality
+            this.db.run(`
+              CREATE TABLE IF NOT EXISTS shared_plans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                plan_id INTEGER NOT NULL,
+                owner_id INTEGER NOT NULL,
+                shared_with_user_id INTEGER NOT NULL,
+                permissions TEXT DEFAULT 'read',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (plan_id) REFERENCES plans (id) ON DELETE CASCADE,
+                FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE CASCADE,
+                FOREIGN KEY (shared_with_user_id) REFERENCES users (id) ON DELETE CASCADE,
+                UNIQUE(plan_id, shared_with_user_id)
+              )
+            `, (err) => {
+              if (err) {
+                console.error('Error creating shared_plans table:', err);
+                reject(err);
+                return;
+              }
+              
+              // Migrate existing data from 'time' column to 'start_time'
+              this.migrateTimeColumn().then(() => {
+                // Add priority column to existing tables if needed
+                return this.addPriorityColumn();
+              }).then(() => {
+                // Add repetition columns to existing tables if needed
+                return this.addRepetitionColumns();
+              }).then(() => {
+                // Add plan columns to existing tables if needed
+                return this.addPlanColumns();
+              }).then(() => {
+                // Add attachments column to existing tables if needed
+                return this.addAttachmentsColumn();
+              }).then(() => {
+                console.log('Database tables created successfully');
+                resolve();
+              }).catch(reject);
+            });
           });
         });
       });
