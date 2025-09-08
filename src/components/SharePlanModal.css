@@ -1,12 +1,32 @@
 .share-plan-modal {
   max-width: 500px;
   width: 90%;
+  background-color: #1a1a1a;
+  color: #ffffff;
+  border: 1px solid #333;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 
 .share-plan-modal .modal-header {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #333;
+  background-color: #1a1a1a;
+  color: #ffffff;
 }
 
 .share-plan-modal .modal-header h2 {
@@ -14,28 +34,33 @@
   align-items: center;
   gap: 8px;
   margin: 0;
+  color: #ffffff;
 }
 
 .share-plan-modal .modal-body {
   padding: 20px;
+  background-color: #1a1a1a;
+  color: #ffffff;
 }
 
 .plan-info {
   margin-bottom: 24px;
   padding: 16px;
-  background-color: #f8f9fa;
+  background-color: #222222;
   border-radius: 8px;
+  color: #ffffff;
+  border: 1px solid #333;
 }
 
 .plan-info h3 {
   margin: 0 0 8px 0;
   font-size: 1.25rem;
-  color: #1f2937;
+  color: #ffffff;
 }
 
 .plan-info p {
   margin: 0;
-  color: #6b7280;
+  color: #ccc;
   font-size: 0.95rem;
 }
 
@@ -47,50 +72,53 @@
   display: block;
   margin-bottom: 6px;
   font-weight: 500;
-  color: #374151;
+  color: #ffffff;
 }
 
 .share-form .form-group input,
 .share-form .form-group select {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid #444;
   border-radius: 6px;
   font-size: 1rem;
   transition: border-color 0.2s;
+  background-color: #333;
+  color: #ffffff;
 }
 
 .share-form .form-group input:focus,
 .share-form .form-group select:focus {
   outline: none;
   border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
 }
 
 .user-preview {
-  background-color: #eff6ff;
-  border: 1px solid #dbeafe;
+  background-color: #1e3a8a;
+  border: 1px solid #333;
   border-radius: 6px;
   padding: 12px;
   margin-bottom: 20px;
+  color: #ffffff;
 }
 
 .user-preview.loading {
-  background-color: #f9fafb;
-  border-color: #e5e7eb;
+  background-color: #2a2a2a;
+  border-color: #444;
 }
 
 .user-preview-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #1e40af;
+  color: #93c5fd;
   font-weight: 500;
   margin-bottom: 8px;
 }
 
 .user-preview.loading .user-preview-header {
-  color: #6b7280;
+  color: #aaa;
 }
 
 .user-preview-content {
@@ -100,12 +128,12 @@
 
 .user-preview-name {
   font-weight: 600;
-  color: #1e40af;
+  color: #93c5fd;
 }
 
 .user-preview-email {
   font-size: 0.9rem;
-  color: #3b82f6;
+  color: #bfdbfe;
 }
 
 .user-not-registered {
@@ -118,12 +146,12 @@
 .permission-note {
   margin-top: 6px;
   font-size: 0.85rem;
-  color: #6b7280;
+  color: #aaa;
 }
 
 .error-message {
-  color: #ef4444;
-  background-color: #fef2f2;
+  color: #fecaca;
+  background-color: #7f1d1d;
   padding: 10px 12px;
   border-radius: 6px;
   margin-bottom: 16px;
@@ -148,13 +176,14 @@
 }
 
 .form-actions .cancel-button {
-  background-color: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
+  background-color: #2a2a2a;
+  color: #ccc;
+  border: 1px solid #444;
 }
 
 .form-actions .cancel-button:hover {
-  background-color: #e5e7eb;
+  background-color: #3a3a3a;
+  color: #ffffff;
 }
 
 .form-actions .share-button {
@@ -182,7 +211,7 @@
 .shared-users-section h3 {
   margin: 0 0 16px 0;
   font-size: 1.1rem;
-  color: #1f2937;
+  color: #ffffff;
 }
 
 .shared-users-list {
@@ -196,9 +225,10 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  background-color: #f8f9fa;
+  background-color: #222222;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #333;
+  color: #ffffff;
 }
 
 .user-info {
@@ -216,17 +246,17 @@
 
 .user-name {
   font-weight: 600;
-  color: #1f2937;
+  color: #ffffff;
 }
 
 .user-email {
-  color: #6b7280;
+  color: #ccc;
   font-size: 0.9rem;
 }
 
 .shared-date {
   font-size: 0.8rem;
-  color: #6b7280;
+  color: #aaa;
 }
 
 .user-actions {
@@ -236,8 +266,8 @@
 }
 
 .permission-badge {
-  background-color: #e0f2fe;
-  color: #0369a1;
+  background-color: #1e3a8a;
+  color: #93c5fd;
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 0.8rem;
@@ -252,13 +282,13 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: #fee2e2;
-  color: #dc2626;
+  background-color: #7f1d1d;
+  color: #fecaca;
   border: none;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .unshare-button:hover {
-  background-color: #fecaca;
+  background-color: #991b1b;
 }
