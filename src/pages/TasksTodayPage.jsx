@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { format, isToday } from 'date-fns'
+import { format, isToday, isBefore } from 'date-fns'
 import { Plus, Clock, Edit2 } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import TaskModal from '../components/TaskModal'
@@ -13,6 +13,29 @@ function TasksTodayPage() {
   const [editingTask, setEditingTask] = useState(null)
   const { tasks, loading, addTask, toggleTask, deleteTask, updateTask } = useTasks()
   const today = new Date()
+
+  // Filter overdue tasks (incomplete tasks from previous days)
+  const overdueTasks = tasks
+    .filter(task => !task.completed && isBefore(parseDateSafely(task.date), new Date(getTodayDateString())))
+    .sort((a, b) => {
+      // Sort by date (oldest first), then by start_time
+      const dateComparison = parseDateSafely(a.date) - parseDateSafely(b.date)
+      if (dateComparison !== 0) return dateComparison
+      
+      // Sort by start_time first, then by finish_time, then by creation time
+      if (!a.start_time && !b.start_time) return 0
+      if (!a.start_time) return 1
+      if (!b.start_time) return -1
+      
+      const startTimeComparison = a.start_time.localeCompare(b.start_time)
+      if (startTimeComparison !== 0) return startTimeComparison
+      
+      // If start times are equal, sort by finish time
+      if (!a.finish_time && !b.finish_time) return 0
+      if (!a.finish_time) return 1
+      if (!b.finish_time) return -1
+      return a.finish_time.localeCompare(b.finish_time)
+    })
 
   const todayTasks = tasks
     .filter(task => isToday(parseDateSafely(task.date)))
@@ -98,6 +121,78 @@ function TasksTodayPage() {
     }
   }
 
+  const renderTaskItem = (task, isOverdue = false) => {
+    const priorityStyles = getPriorityStyles(task.priority || 3)
+    return (
+      <div key={task.id} className={`timeline-item ${task.completed ? 'completed' : 'pending'} ${isOverdue ? 'overdue' : ''}`}
+           style={{
+             borderLeft: `4px solid ${priorityStyles.color}`,
+             backgroundColor: priorityStyles.backgroundColor
+           }}>
+        <div className="timeline-marker" style={{ backgroundColor: priorityStyles.color }}></div>
+        <div className="timeline-content">
+          <div className="task-card">
+            <div className="task-header">
+              <input
+                type="checkbox"
+                checked={task.completed}
+                onChange={() => toggleTask(task.id)}
+                className="task-checkbox"
+              />
+              <div className="task-title-section">
+                <h3 className="task-title">
+                  {isOverdue && <span className="overdue-badge">OVERDUE</span>}
+                  {getRepeatIcon(task.repeat_type)} {task.title}
+                </h3>
+                <div className="task-badges">
+                  <span className="priority-badge" style={{ color: priorityStyles.color }}>
+                    P{task.priority || 3}
+                  </span>
+                  {task.repeat_type && task.repeat_type !== 'none' && (
+                    <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
+                      🔄
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="task-actions">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleEditTask(task)
+                  }}
+                  className="edit-button"
+                  title="Edit task"
+                >
+                  <Edit2 size={14} />
+                </button>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    deleteTask(task.id)
+                  }}
+                  className="delete-button"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            {task.description && (
+              <p className="task-description">{task.description}</p>
+            )}
+            <div className="task-time">
+              <Clock size={16} />
+              <span>{getTimeSlot(task.start_time, task.finish_time)}</span>
+              {isOverdue && (
+                <span className="overdue-date">Due: {format(parseDateSafely(task.date), 'MMM d, yyyy')}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="tasks-today-page">
       <div className="today-header">
@@ -140,7 +235,7 @@ function TasksTodayPage() {
       </div>
 
       <div className="tasks-timeline">
-        {todayTasks.length === 0 ? (
+        {todayTasks.length === 0 && overdueTasks.length === 0 ? (
           <div className="no-tasks">
             <Clock size={48} />
             <h3>No tasks for today</h3>
@@ -148,142 +243,23 @@ function TasksTodayPage() {
           </div>
         ) : (
           <div className="timeline">
-            {pendingTasks.map(task => {
-              const priorityStyles = getPriorityStyles(task.priority || 3)
-              return (
-                <div key={task.id} className="timeline-item pending"
-                     style={{
-                       borderLeft: `4px solid ${priorityStyles.color}`,
-                       backgroundColor: priorityStyles.backgroundColor
-                     }}>
-                  <div className="timeline-marker" style={{ backgroundColor: priorityStyles.color }}></div>
-                  <div className="timeline-content">
-                    <div className="task-card">
-                      <div className="task-header">
-                        <input
-                          type="checkbox"
-                          checked={task.completed}
-                          onChange={() => toggleTask(task.id)}
-                          className="task-checkbox"
-                        />
-                        <div className="task-title-section">
-                          <h3 className="task-title">{getRepeatIcon(task.repeat_type)} {task.title}</h3>
-                          <div className="task-badges">
-                            <span className="priority-badge" style={{ color: priorityStyles.color }}>
-                              P{task.priority || 3}
-                            </span>
-                            {task.repeat_type && task.repeat_type !== 'none' && (
-                              <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
-                                🔄
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="task-actions">
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleEditTask(task)
-                            }}
-                            className="edit-button"
-                            title="Edit task"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              deleteTask(task.id)
-                            }}
-                            className="delete-button"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      </div>
-                      {task.description && (
-                        <p className="task-description">{task.description}</p>
-                      )}
-                      <div className="task-time">
-                        <Clock size={16} />
-                        <span>{getTimeSlot(task.start_time, task.finish_time)}</span>
-                      </div>
-                    </div>
-                  </div>
+            {overdueTasks.length > 0 && (
+              <>
+                <div className="timeline-separator overdue-separator">
+                  <span>Overdue Tasks</span>
                 </div>
-              )
-            })}
+                {overdueTasks.map(task => renderTaskItem(task, true))}
+              </>
+            )}
+            
+            {pendingTasks.map(task => renderTaskItem(task))}
             
             {completedTasks.length > 0 && (
               <>
                 <div className="timeline-separator">
                   <span>Completed Tasks</span>
                 </div>
-                {completedTasks.map(task => {
-                  const priorityStyles = getPriorityStyles(task.priority || 3)
-                  return (
-                    <div key={task.id} className="timeline-item completed"
-                         style={{
-                           borderLeft: `4px solid ${priorityStyles.color}`,
-                           backgroundColor: priorityStyles.backgroundColor
-                         }}>
-                      <div className="timeline-marker" style={{ backgroundColor: priorityStyles.color }}></div>
-                      <div className="timeline-content">
-                        <div className="task-card">
-                          <div className="task-header">
-                            <input
-                              type="checkbox"
-                              checked={task.completed}
-                              onChange={() => toggleTask(task.id)}
-                              className="task-checkbox"
-                            />
-                            <div className="task-title-section">
-                              <h3 className="task-title">{getRepeatIcon(task.repeat_type)} {task.title}</h3>
-                              <div className="task-badges">
-                                <span className="priority-badge" style={{ color: priorityStyles.color }}>
-                                  P{task.priority || 3}
-                                </span>
-                                {task.repeat_type && task.repeat_type !== 'none' && (
-                                  <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
-                                    🔄
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="task-actions">
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleEditTask(task)
-                                }}
-                                className="edit-button"
-                                title="Edit task"
-                              >
-                                <Edit2 size={14} />
-                              </button>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  deleteTask(task.id)
-                                }}
-                                className="delete-button"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          </div>
-                          {task.description && (
-                            <p className="task-description">{task.description}</p>
-                          )}
-                          <div className="task-time">
-                            <Clock size={16} />
-                            <span>{getTimeSlot(task.start_time, task.finish_time)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
+                {completedTasks.map(task => renderTaskItem(task))}
               </>
             )}
           </div>

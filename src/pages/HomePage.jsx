@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, startOfWeek, endOfWeek, isBefore } from 'date-fns'
 import { Plus, ChevronLeft, ChevronRight, FolderPlus, Edit2 } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import { usePlans } from '../hooks/usePlans'
@@ -65,6 +65,23 @@ function HomePage() {
       
       // Fallback to plan date if no current task date
       return isSameDay(parseDateSafely(plan.date), date)
+    })
+  }
+
+  // Get overdue tasks for the selected date
+  const getOverdueTasks = (date) => {
+    // Only show overdue tasks if we're looking at today's date
+    const isTodaySelected = isToday(date)
+    if (!isTodaySelected) return []
+    
+    // Return incomplete tasks from previous days
+    return tasks.filter(task => 
+      !task.completed && 
+      !task.plan_id && 
+      isBefore(parseDateSafely(task.date), new Date(formatDateForAPI(new Date())))
+    ).sort((a, b) => {
+      // Sort by date (oldest first)
+      return parseDateSafely(a.date) - parseDateSafely(b.date)
     })
   }
 
@@ -437,10 +454,103 @@ function HomePage() {
           </div>
         ) : (
           <div className="items-list">
-            {getPlansForDate(selectedDate).length === 0 && getTasksForDate(selectedDate).length === 0 ? (
+            {getPlansForDate(selectedDate).length === 0 && 
+             getTasksForDate(selectedDate).length === 0 && 
+             getOverdueTasks(selectedDate).length === 0 ? (
               <p className="no-items">No tasks or plans for this day</p>
             ) : (
               <>
+                {/* Render Overdue Tasks (only when viewing today) */}
+                {isToday(selectedDate) && getOverdueTasks(selectedDate).length > 0 && (
+                  <div className="overdue-section">
+                    <h4 className="overdue-header">Overdue Tasks</h4>
+                    {getOverdueTasks(selectedDate).map(task => {
+                      const priorityStyles = getPriorityStyles(task.priority || 3)
+                      const isDragging = draggedTask && draggedTask.id === task.id
+                      return (
+                        <div key={`overdue-${task.id}`} className={`task-item overdue ${
+                          task.completed ? 'completed' : ''
+                        } ${
+                          isDragging ? 'dragging' : ''
+                        }`}
+                             style={{
+                               borderLeft: `4px solid ${priorityStyles.color}`,
+                               backgroundColor: priorityStyles.backgroundColor,
+                               opacity: isDragging ? 0.5 : 1
+                             }}
+                             draggable
+                             onDragStart={(e) => handleDragStart(e, task)}
+                             onDragEnd={handleDragEnd}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={task.completed}
+                            onChange={() => toggleTask(task.id)}
+                          />
+                          <div className="task-content">
+                            <div className="task-header-info">
+                              <h4>{getRepeatIcon(task.repeat_type)} {task.title}</h4>
+                              <div className="task-badges">
+                                <span className="priority-badge" style={{ color: priorityStyles.color }}>
+                                  P{task.priority || 3}
+                                </span>
+                                <span className="overdue-badge">OVERDUE</span>
+                                {task.repeat_type && task.repeat_type !== 'none' && (
+                                  <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
+                                    🔄
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            {task.description && <p>{task.description}</p>}
+                            <div className="task-meta">
+                              <span className="overdue-date">Due: {format(parseDateSafely(task.date), 'MMM d, yyyy')}</span>
+                              {task.repeat_type && task.repeat_type !== 'none' && (
+                                <div className="repeat-info">
+                                  <small>Repeats: {formatRepeatType(task.repeat_type)}
+                                    {task.repeat_until && ` until ${new Date(task.repeat_until).toLocaleDateString()}`}
+                                  </small>
+                                </div>
+                              )}
+                              {(task.start_time || task.finish_time) && (
+                                <span className="task-time">
+                                  {task.start_time && task.finish_time 
+                                    ? `${task.start_time} - ${task.finish_time}`
+                                    : task.start_time 
+                                      ? `Start: ${task.start_time}`
+                                      : `End: ${task.finish_time}`
+                                  }
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="task-actions">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEditTask(task)
+                              }}
+                              className="edit-button"
+                              title="Edit task"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                deleteTask(task.id)
+                              }}
+                              className="delete-button"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+                
                 {/* Render Plans */}
                 {getPlansForDate(selectedDate).map(plan => (
                   <div 

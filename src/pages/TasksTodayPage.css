@@ -365,3 +365,69 @@
 .timeline-marker {
   transition: all 0.2s;
 }
+
+/* Overdue Task Styles */
+.timeline-item.overdue .task-card {
+  background: #2a1a1a;
+  border-color: #ff6b6b;
+}
+
+.timeline-item.overdue .timeline-marker {
+  background: #ff6b6b;
+}
+
+.overdue-badge {
+  background: #ff6b6b;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  margin-right: 0.5rem;
+}
+
+.overdue-date {
+  margin-left: auto;
+  color: #ff6b6b;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.timeline-separator {
+  position: relative;
+  margin: 3rem 0;
+  text-align: center;
+}
+
+.timeline-separator::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: #333;
+}
+
+.timeline-separator span {
+  background: #1a1a1a;
+  color: #888;
+  padding: 0 1rem;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: relative;
+  display: inline-block;
+}
+
+.overdue-separator {
+  margin-top: 0;
+}
+
+.overdue-separator::before {
+  background: #ff6b6b;
+}
+
+.overdue-separator span {
+  color: #ff6b6b;
+}
