@@ -335,6 +335,7 @@
   border-radius: 8px;
   border: 1px solid #333;
   transition: all 0.2s;
+  border-left-width: 4px;
 }
 
 .task-item:hover {
@@ -363,6 +364,19 @@
   margin: 0 0 0.5rem 0;
   color: #ccc;
   font-size: 0.9rem;
+}
+
+.task-attachments-preview {
+  margin: 0.5rem 0;
+}
+
+.attachments-indicator {
+  background: rgba(100, 108, 255, 0.2);
+  color: #646cff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  display: inline-block;
 }
 
 .task-time {

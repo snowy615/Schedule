@@ -182,6 +182,12 @@ function TasksTodayPage() {
             {task.description && (
               <p className="task-description">{task.description}</p>
             )}
+            {task.attachments && (
+              <div className="task-attachments">
+                <h4>Attachments & Notes:</h4>
+                <pre className="attachments-content">{task.attachments}</pre>
+              </div>
+            )}
             <div className="task-time">
               <Clock size={16} />
               <span>{getTimeSlot(task.start_time, task.finish_time)}</span>

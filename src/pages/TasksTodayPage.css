@@ -252,6 +252,30 @@
   width: fit-content;
 }
 
+.task-attachments {
+  background: rgba(100, 108, 255, 0.1);
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin: 0.75rem 0;
+  border-left: 3px solid #646cff;
+}
+
+.task-attachments h4 {
+  margin: 0 0 0.5rem 0;
+  color: #646cff;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.attachments-content {
+  margin: 0;
+  color: #ccc;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  font-family: inherit;
+  line-height: 1.4;
+}
+
 .timeline-separator {
   position: relative;
   margin: 3rem 0;

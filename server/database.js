@@ -60,6 +60,7 @@ class Database {
             parent_task_id INTEGER,
             plan_id INTEGER,
             plan_order INTEGER,
+            attachments TEXT,
             completed BOOLEAN DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -105,6 +106,9 @@ class Database {
             }).then(() => {
               // Add plan columns to existing tables if needed
               return this.addPlanColumns();
+            }).then(() => {
+              // Add attachments column to existing tables if needed
+              return this.addAttachmentsColumn();
             }).then(() => {
               console.log('Database tables created successfully');
               resolve();
@@ -317,6 +321,36 @@ class Database {
         Promise.all(addColumnsPromises).then(() => {
           resolve();
         }).catch(reject);
+      });
+    });
+  }
+
+  // Add attachments column to existing tasks table if needed
+  async addAttachmentsColumn() {
+    return new Promise((resolve, reject) => {
+      // Check if attachments column exists
+      this.db.all("PRAGMA table_info(tasks)", (err, columns) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        const hasAttachmentsColumn = columns.some(col => col.name === 'attachments');
+        
+        if (!hasAttachmentsColumn) {
+          // Add attachments column
+          this.db.run("ALTER TABLE tasks ADD COLUMN attachments TEXT", (err) => {
+            if (err && !err.message.includes('duplicate column name')) {
+              console.error('Error adding attachments column:', err);
+              reject(err);
+            } else {
+              console.log('attachments column added successfully');
+              resolve();
+            }
+          });
+        } else {
+          resolve();
+        }
       });
     });
   }

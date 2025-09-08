@@ -33,7 +33,7 @@ router.get('/date/:date', async (req, res) => {
 // Create a new task
 router.post('/', async (req, res) => {
   try {
-    const { title, description, date, start_time, finish_time, priority, repeat_type, repeat_interval, repeat_until } = req.body;
+    const { title, description, date, start_time, finish_time, priority, repeat_type, repeat_interval, repeat_until, attachments } = req.body;
 
     // Validate required fields
     if (!title || !date) {
@@ -85,7 +85,8 @@ router.post('/', async (req, res) => {
       priority,
       repeat_type,
       repeat_interval,
-      repeat_until
+      repeat_until,
+      attachments
     });
 
     res.status(201).json({
@@ -122,7 +123,7 @@ router.get('/:id', async (req, res) => {
 // Update a task
 router.put('/:id', async (req, res) => {
   try {
-    const { title, description, date, start_time, finish_time, priority, repeat_type, repeat_interval, repeat_until, completed } = req.body;
+    const { title, description, date, start_time, finish_time, priority, repeat_type, repeat_interval, repeat_until, completed, attachments } = req.body;
     const updates = {};
 
     // Only include provided fields in updates
@@ -180,6 +181,7 @@ router.put('/:id', async (req, res) => {
       updates.repeat_until = repeat_until;
     }
     if (completed !== undefined) updates.completed = completed ? 1 : 0;
+    if (attachments !== undefined) updates.attachments = attachments;
 
     // Validate time relationship if both times are being updated
     const currentStartTime = start_time !== undefined ? start_time : null;

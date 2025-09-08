@@ -526,14 +526,14 @@ function HomePage() {
                             } ${
                               isDragging ? 'dragging' : ''
                             }`}
-                                style={{
-                                  borderLeft: `4px solid ${priorityStyles.color}`,
-                                  backgroundColor: priorityStyles.backgroundColor,
-                                  opacity: isDragging ? 0.5 : 1
-                                }}
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, task)}
-                                onDragEnd={handleDragEnd}
+                              style={{
+                                borderLeft: `4px solid ${priorityStyles.color}`,
+                                backgroundColor: priorityStyles.backgroundColor,
+                                opacity: isDragging ? 0.5 : 1
+                              }}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, task)}
+                              onDragEnd={handleDragEnd}
                             >
                               <input
                                 type="checkbox"
@@ -556,6 +556,11 @@ function HomePage() {
                                   </div>
                                 </div>
                                 {task.description && <p>{task.description}</p>}
+                                {task.attachments && (
+                                  <div className="task-attachments-preview">
+                                    <span className="attachments-indicator">📎 Attachments</span>
+                                  </div>
+                                )}
                                 <div className="task-meta">
                                   <span className="overdue-date">Due: {format(parseDateSafely(task.date), 'MMM d, yyyy')}</span>
                                   {task.repeat_type && task.repeat_type !== 'none' && (
@@ -680,6 +685,11 @@ function HomePage() {
                               </div>
                             </div>
                             {task.description && <p>{task.description}</p>}
+                            {task.attachments && (
+                              <div className="task-attachments-preview">
+                                <span className="attachments-indicator">📎 Attachments</span>
+                              </div>
+                            )}
                             {task.repeat_type && task.repeat_type !== 'none' && (
                               <div className="repeat-info">
                                 <small>Repeats: {formatRepeatType(task.repeat_type)}

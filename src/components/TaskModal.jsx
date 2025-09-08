@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
-import { X } from 'lucide-react'
+import { X, Link, FileText, Upload } from 'lucide-react'
 import { REPEAT_OPTIONS } from '../utils/repeatUtils'
 import './TaskModal.css'
 
@@ -12,7 +12,8 @@ function TaskModal({ onClose, onSave, selectedDate, task = null, isEditing = fal
     finish_time: '',
     priority: 3,
     repeat_type: 'none',
-    repeat_until: ''
+    repeat_until: '',
+    attachments: '' // New field for attachments
   })
 
   // Initialize form data when editing
@@ -25,7 +26,8 @@ function TaskModal({ onClose, onSave, selectedDate, task = null, isEditing = fal
         finish_time: task.finish_time || '',
         priority: task.priority || 3,
         repeat_type: task.repeat_type || 'none',
-        repeat_until: task.repeat_until || ''
+        repeat_until: task.repeat_until || '',
+        attachments: task.attachments || '' // Initialize attachments
       })
     }
   }, [isEditing, task])
@@ -49,12 +51,35 @@ function TaskModal({ onClose, onSave, selectedDate, task = null, isEditing = fal
     }
     
     if (!isEditing) {
-      setFormData({ title: '', description: '', start_time: '', finish_time: '', priority: 3, repeat_type: 'none', repeat_until: '' })
+      setFormData({ 
+        title: '', 
+        description: '', 
+        start_time: '', 
+        finish_time: '', 
+        priority: 3, 
+        repeat_type: 'none', 
+        repeat_until: '',
+        attachments: ''
+      })
     }
   }
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  // Handle file upload (simulated - in a real app, this would upload to a server)
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      // In a real application, you would upload the file to a server and get a URL
+      // For now, we'll just add a placeholder text
+      const fileEntry = `${file.name} (File uploaded - in a real app this would be a link)`;
+      setFormData(prev => ({
+        ...prev,
+        attachments: prev.attachments ? `${prev.attachments}\n${fileEntry}` : fileEntry
+      }))
+    }
   }
 
   return (
@@ -94,6 +119,40 @@ function TaskModal({ onClose, onSave, selectedDate, task = null, isEditing = fal
               placeholder="Add a description (optional)..."
               rows="3"
             />
+          </div>
+
+          {/* Attachments Section */}
+          <div className="form-group">
+            <label htmlFor="attachments">
+              <FileText size={16} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
+              Attachments, Links & Instructions
+            </label>
+            <textarea
+              id="attachments"
+              value={formData.attachments}
+              onChange={(e) => handleChange('attachments', e.target.value)}
+              placeholder="Add links, instructions, or other notes here...
+Example:
+- https://example.com/document.pdf
+- Meeting notes: Discuss project timeline
+- File: project_plan.docx (uploaded)"
+              rows="4"
+            />
+            <div className="attachment-actions">
+              <label className="file-upload-label">
+                <Upload size={16} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
+                Upload File
+                <input
+                  type="file"
+                  onChange={handleFileUpload}
+                  className="file-input"
+                  accept="*/*"
+                />
+              </label>
+              <small className="field-hint">
+                Add links, file names, or instructions. Files are simulated in this demo.
+              </small>
+            </div>
           </div>
 
           <div className="form-group">

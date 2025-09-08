@@ -4,11 +4,11 @@ class Task {
   // Create a new task
   static async create(userId, taskData) {
     return new Promise((resolve, reject) => {
-      const { title, description, date, start_time, finish_time, priority, repeat_type, repeat_interval, repeat_until, parent_task_id } = taskData;
+      const { title, description, date, start_time, finish_time, priority, repeat_type, repeat_interval, repeat_until, parent_task_id, attachments } = taskData;
       const db = database.getDB();
       const stmt = db.prepare(`
-        INSERT INTO tasks (user_id, title, description, date, start_time, finish_time, priority, repeat_type, repeat_interval, repeat_until, parent_task_id) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO tasks (user_id, title, description, date, start_time, finish_time, priority, repeat_type, repeat_interval, repeat_until, parent_task_id, attachments) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       stmt.run([
@@ -22,7 +22,8 @@ class Task {
         repeat_type || 'none',
         repeat_interval || 1,
         repeat_until || null,
-        parent_task_id || null
+        parent_task_id || null,
+        attachments || null
       ], function(err) {
         if (err) {
           reject(err);
@@ -100,7 +101,7 @@ class Task {
   // Update a task
   static async update(id, userId, updates) {
     return new Promise((resolve, reject) => {
-      const allowedFields = ['title', 'description', 'date', 'start_time', 'finish_time', 'priority', 'repeat_type', 'repeat_interval', 'repeat_until', 'completed'];
+      const allowedFields = ['title', 'description', 'date', 'start_time', 'finish_time', 'priority', 'repeat_type', 'repeat_interval', 'repeat_until', 'completed', 'attachments'];
       const fields = [];
       const values = [];
 

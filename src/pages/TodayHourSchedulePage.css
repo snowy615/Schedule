@@ -12,6 +12,9 @@
   margin-bottom: 2rem;
   padding: 1rem 0;
   border-bottom: 1px solid #333;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .date-info h1 {
@@ -48,13 +51,14 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
+  width: 100%;
 }
 
 .hour-slot {
   display: grid;
-  grid-template-columns: 100px 1fr;
+  grid-template-columns: 120px 1fr;
   border-bottom: 1px solid #333;
   min-height: 80px;
 }
@@ -388,6 +392,7 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
+    max-width: 100%;
   }
   
   .date-info h1 {
@@ -513,14 +518,14 @@
 /* Early Hours Collapse/Expand Styles */
 .early-hours-collapsed {
   display: grid;
-  grid-template-columns: 100px 1fr;
+  grid-template-columns: 120px 1fr;
   border-bottom: 1px solid #333;
   background: rgba(100, 108, 255, 0.05);
 }
 
 .early-hours-header {
   display: grid;
-  grid-template-columns: 100px 1fr;
+  grid-template-columns: 120px 1fr;
   border-bottom: 2px solid #646cff;
   background: rgba(100, 108, 255, 0.1);
 }
@@ -601,14 +606,14 @@
 /* Late Hours Collapse/Expand Styles */
 .late-hours-collapsed {
   display: grid;
-  grid-template-columns: 100px 1fr;
+  grid-template-columns: 120px 1fr;
   border-bottom: 1px solid #333;
   background: rgba(168, 85, 247, 0.05);
 }
 
 .late-hours-header {
   display: grid;
-  grid-template-columns: 100px 1fr;
+  grid-template-columns: 120px 1fr;
   border-bottom: 2px solid #a855f7;
   background: rgba(168, 85, 247, 0.1);
 }
