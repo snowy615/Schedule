@@ -271,311 +271,313 @@ function TodayHourSchedulePage() {
 
   return (
     <div className="today-hour-schedule-page">
-      <div className="hour-schedule-header">
-        <div className="date-info">
-          <h1>Today's Hour Schedule</h1>
-          <p className="current-date">{format(today, 'EEEE, MMMM d, yyyy')}</p>
+      <div className="hour-schedule-container">
+        <div className="hour-schedule-header">
+          <div className="date-info">
+            <h1>Today's Hour Schedule</h1>
+            <p className="current-date">{format(today, 'EEEE, MMMM d, yyyy')}</p>
+          </div>
+          <button 
+            onClick={() => setShowTaskModal(true)}
+            className="add-task-button"
+          >
+            <Plus size={20} />
+            Add Task
+          </button>
         </div>
-        <button 
-          onClick={() => setShowTaskModal(true)}
-          className="add-task-button"
-        >
-          <Plus size={20} />
-          Add Task
-        </button>
-      </div>
 
-      <div className="hour-schedule-grid">
-        {/* Early Hours Collapse/Expand Button */}
-        {!isEarlyHoursExpanded && (
-          <div className="early-hours-collapsed">
-            <div className="time-label collapsed">
-              <span className="time-display collapsed-time">12:00 AM - 5:59 AM</span>
-            </div>
-            <div className="tasks-column collapsed">
-              <button 
-                className="expand-early-hours-button"
-                onClick={() => setIsEarlyHoursExpanded(true)}
-              >
-                <ChevronDown size={16} />
-                <span>
-                  Show early hours 
-                  {earlyHoursTaskCount > 0 && (
-                    <span className="task-count">({earlyHoursTaskCount} task{earlyHoursTaskCount !== 1 ? 's' : ''})</span>
-                  )}
-                </span>
-              </button>
-            </div>
-          </div>
-        )}
-        
-        {/* Collapse Early Hours Button (when expanded) */}
-        {isEarlyHoursExpanded && (
-          <div className="early-hours-header">
-            <div className="time-label">
-              <span className="time-display">Early Hours</span>
-            </div>
-            <div className="tasks-column">
-              <button 
-                className="collapse-early-hours-button"
-                onClick={() => setIsEarlyHoursExpanded(false)}
-              >
-                <ChevronUp size={16} />
-                <span>Hide early hours (12 AM - 5 AM)</span>
-              </button>
-            </div>
-          </div>
-        )}
-        
-        {/* Hour Slots */}
-        {visibleSlots.map(slot => (
-          <div key={slot.hour} className="hour-slot">
-            <div className="time-label">
-              <span className="time-display">{slot.displayTime}</span>
-            </div>
-            <div className="tasks-column" style={{ position: 'relative', minHeight: '80px' }}>
-              {slot.tasks.length === 0 ? (
-                <div className="empty-slot">
-                  <span>No tasks scheduled</span>
-                </div>
-              ) : (
-                slot.tasks.map(task => {
-                  const priorityStyles = getPriorityStyles(task.priority || 3)
-                  const positioning = getTaskPositioning(task, slot.hour)
-                  
-                  // Calculate task duration in minutes to determine if it's a short task
-                  const getTaskDurationInMinutes = () => {
-                    if (!task.start_time || !task.finish_time) return 60 // Default 1 hour
-                    const [startHour, startMin] = task.start_time.split(':').map(Number)
-                    const [endHour, endMin] = task.finish_time.split(':').map(Number)
-                    const startTotal = startHour * 60 + startMin
-                    const endTotal = endHour * 60 + endMin
-                    return endTotal - startTotal
-                  }
-                  
-                  const taskDurationMinutes = getTaskDurationInMinutes()
-                  const isShortDuration = taskDurationMinutes <= 30
-                  
-                  return (
-                    <div 
-                      key={`${task.id}-${slot.hour}`}
-                      className={`hour-task-card continuous-task ${task.completed ? 'completed' : 'pending'}${isShortDuration ? ' short-duration' : ''}`}
-                      onMouseEnter={(e) => handleTaskMouseEnter(task, e)}
-                      onMouseLeave={handleTaskMouseLeave}
-                      style={{
-                        position: 'absolute',
-                        top: `${positioning.top}px`,
-                        left: '0.5rem',
-                        right: '0.5rem',
-                        height: `${positioning.height}px`,
-                        borderLeft: `4px solid ${priorityStyles.color}`,
-                        backgroundColor: task.completed ? 
-                          'rgba(34, 197, 94, 0.1)' : 
-                          priorityStyles.backgroundColor,
-                        borderTopLeftRadius: positioning.isFirstHour ? '6px' : '2px',
-                        borderTopRightRadius: positioning.isFirstHour ? '6px' : '2px',
-                        borderBottomLeftRadius: positioning.isLastHour ? '6px' : '2px',
-                        borderBottomRightRadius: positioning.isLastHour ? '6px' : '2px',
-                        zIndex: 2
-                      }}
-                    >
-                      {positioning.isFirstHour && (
-                        <>
-                          <div className="task-header">
-                            <input
-                              type="checkbox"
-                              checked={task.completed}
-                              onChange={() => toggleTask(task.id)}
-                              className="task-checkbox"
-                            />
-                            <div className="task-title-section">
-                              <h3 className={`task-title ${task.completed ? 'completed-text' : ''}`}>
-                                {getRepeatIcon(task.repeat_type)} {task.title}
-                              </h3>
-                              <div className="task-badges">
-                                <span className="priority-badge" style={{ color: priorityStyles.color }}>
-                                  P{task.priority || 3}
-                                </span>
-                                {task.repeat_type && task.repeat_type !== 'none' && (
-                                  <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
-                                    🔄
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="task-actions">
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleEditTask(task)
-                                }}
-                                className="edit-task-button"
-                                title="Edit task"
-                              >
-                                <Edit2 size={14} />
-                              </button>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  deleteTask(task.id)
-                                }}
-                                className="delete-button"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          </div>
-                          {task.description && positioning.height > 60 && !isShortDuration && (
-                            <p className={`task-description ${task.completed ? 'completed-text' : ''}`}>
-                              {task.description}
-                            </p>
-                          )}
-                          <div className="task-time-info">
-                            <Clock size={14} />
-                            <span>
-                              {task.start_time && task.finish_time
-                                ? `${formatTime(task.start_time)} - ${formatTime(task.finish_time)}`
-                                : task.start_time
-                                ? `Start: ${formatTime(task.start_time)}`
-                                : task.finish_time
-                                ? `End: ${formatTime(task.finish_time)}`
-                                : 'No time set'
-                              }
-                            </span>
-                          </div>
-                        </>
-                      )}
-                      {!positioning.isFirstHour && (
-                        <div className="task-continuation">
-                          <span className="continuation-text">{task.title} (continued)</span>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })
-              )}
-            </div>
-          </div>
-        ))}
-        
-        {/* Late Hours Collapse/Expand Button */}
-        {!isLateHoursExpanded && (
-          <div className="late-hours-collapsed">
-            <div className="time-label collapsed">
-              <span className="time-display collapsed-time">10:00 PM - 11:59 PM</span>
-            </div>
-            <div className="tasks-column collapsed">
-              <button 
-                className="expand-late-hours-button"
-                onClick={() => setIsLateHoursExpanded(true)}
-              >
-                <ChevronDown size={16} />
-                <span>
-                  Show late hours 
-                  {lateHoursTaskCount > 0 && (
-                    <span className="task-count">({lateHoursTaskCount} task{lateHoursTaskCount !== 1 ? 's' : ''})</span>
-                  )}
-                </span>
-              </button>
-            </div>
-          </div>
-        )}
-        
-        {/* Collapse Late Hours Button (when expanded) */}
-        {isLateHoursExpanded && (
-          <div className="late-hours-header">
-            <div className="time-label">
-              <span className="time-display">Late Hours</span>
-            </div>
-            <div className="tasks-column">
-              <button 
-                className="collapse-late-hours-button"
-                onClick={() => setIsLateHoursExpanded(false)}
-              >
-                <ChevronUp size={16} />
-                <span>Hide late hours (10 PM - 11 PM)</span>
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Task Hover Tooltip */}
-      {hoveredTask && (
-        <div 
-          className={`task-tooltip ${hoveredTask ? 'visible' : ''}`}
-          style={{
-            left: `${tooltipPosition.x}px`,
-            top: `${tooltipPosition.y}px`
-          }}
-        >
-          <div className="tooltip-title">
-            {getRepeatIcon(hoveredTask.repeat_type)} {hoveredTask.title}
-          </div>
-          
-          {hoveredTask.description && (
-            <div className="tooltip-description">
-              {hoveredTask.description}
+        <div className="hour-schedule-grid">
+          {/* Early Hours Collapse/Expand Button */}
+          {!isEarlyHoursExpanded && (
+            <div className="early-hours-collapsed">
+              <div className="time-label collapsed">
+                <span className="time-display collapsed-time">12:00 AM - 5:59 AM</span>
+              </div>
+              <div className="tasks-column collapsed">
+                <button 
+                  className="expand-early-hours-button"
+                  onClick={() => setIsEarlyHoursExpanded(true)}
+                >
+                  <ChevronDown size={16} />
+                  <span>
+                    Show early hours 
+                    {earlyHoursTaskCount > 0 && (
+                      <span className="task-count">({earlyHoursTaskCount} task{earlyHoursTaskCount !== 1 ? 's' : ''})</span>
+                    )}
+                  </span>
+                </button>
+              </div>
             </div>
           )}
           
-          <div className="tooltip-details">
-            <div className="tooltip-detail-row">
-              <span className="tooltip-detail-label">Priority:</span>
-              <span 
-                className="tooltip-priority"
-                style={{
-                  backgroundColor: getPriorityStyles(hoveredTask.priority || 3).backgroundColor,
-                  color: getPriorityStyles(hoveredTask.priority || 3).color,
-                  border: `1px solid ${getPriorityStyles(hoveredTask.priority || 3).color}`
-                }}
-              >
-                P{hoveredTask.priority || 3}
-              </span>
+          {/* Collapse Early Hours Button (when expanded) */}
+          {isEarlyHoursExpanded && (
+            <div className="early-hours-header">
+              <div className="time-label">
+                <span className="time-display">Early Hours</span>
+              </div>
+              <div className="tasks-column">
+                <button 
+                  className="collapse-early-hours-button"
+                  onClick={() => setIsEarlyHoursExpanded(false)}
+                >
+                  <ChevronUp size={16} />
+                  <span>Hide early hours (12 AM - 5 AM)</span>
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* Hour Slots */}
+          {visibleSlots.map(slot => (
+            <div key={slot.hour} className="hour-slot">
+              <div className="time-label">
+                <span className="time-display">{slot.displayTime}</span>
+              </div>
+              <div className="tasks-column" style={{ position: 'relative', minHeight: '80px' }}>
+                {slot.tasks.length === 0 ? (
+                  <div className="empty-slot">
+                    <span>No tasks scheduled</span>
+                  </div>
+                ) : (
+                  slot.tasks.map(task => {
+                    const priorityStyles = getPriorityStyles(task.priority || 3)
+                    const positioning = getTaskPositioning(task, slot.hour)
+                    
+                    // Calculate task duration in minutes to determine if it's a short task
+                    const getTaskDurationInMinutes = () => {
+                      if (!task.start_time || !task.finish_time) return 60 // Default 1 hour
+                      const [startHour, startMin] = task.start_time.split(':').map(Number)
+                      const [endHour, endMin] = task.finish_time.split(':').map(Number)
+                      const startTotal = startHour * 60 + startMin
+                      const endTotal = endHour * 60 + endMin
+                      return endTotal - startTotal
+                    }
+                    
+                    const taskDurationMinutes = getTaskDurationInMinutes()
+                    const isShortDuration = taskDurationMinutes <= 30
+                    
+                    return (
+                      <div 
+                        key={`${task.id}-${slot.hour}`}
+                        className={`hour-task-card continuous-task ${task.completed ? 'completed' : 'pending'}${isShortDuration ? ' short-duration' : ''}`}
+                        onMouseEnter={(e) => handleTaskMouseEnter(task, e)}
+                        onMouseLeave={handleTaskMouseLeave}
+                        style={{
+                          position: 'absolute',
+                          top: `${positioning.top}px`,
+                          left: '0.5rem',
+                          right: '0.5rem',
+                          height: `${positioning.height}px`,
+                          borderLeft: `4px solid ${priorityStyles.color}`,
+                          backgroundColor: task.completed ? 
+                            'rgba(34, 197, 94, 0.1)' : 
+                            priorityStyles.backgroundColor,
+                          borderTopLeftRadius: positioning.isFirstHour ? '6px' : '2px',
+                          borderTopRightRadius: positioning.isFirstHour ? '6px' : '2px',
+                          borderBottomLeftRadius: positioning.isLastHour ? '6px' : '2px',
+                          borderBottomRightRadius: positioning.isLastHour ? '6px' : '2px',
+                          zIndex: 2
+                        }}
+                      >
+                        {positioning.isFirstHour && (
+                          <>
+                            <div className="task-header">
+                              <input
+                                type="checkbox"
+                                checked={task.completed}
+                                onChange={() => toggleTask(task.id)}
+                                className="task-checkbox"
+                              />
+                              <div className="task-title-section">
+                                <h3 className={`task-title ${task.completed ? 'completed-text' : ''}`}>
+                                  {getRepeatIcon(task.repeat_type)} {task.title}
+                                </h3>
+                                <div className="task-badges">
+                                  <span className="priority-badge" style={{ color: priorityStyles.color }}>
+                                    P{task.priority || 3}
+                                  </span>
+                                  {task.repeat_type && task.repeat_type !== 'none' && (
+                                    <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
+                                      🔄
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="task-actions">
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleEditTask(task)
+                                  }}
+                                  className="edit-task-button"
+                                  title="Edit task"
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    deleteTask(task.id)
+                                  }}
+                                  className="delete-button"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            </div>
+                            {task.description && positioning.height > 60 && !isShortDuration && (
+                              <p className={`task-description ${task.completed ? 'completed-text' : ''}`}>
+                                {task.description}
+                              </p>
+                            )}
+                            <div className="task-time-info">
+                              <Clock size={14} />
+                              <span>
+                                {task.start_time && task.finish_time
+                                  ? `${formatTime(task.start_time)} - ${formatTime(task.finish_time)}`
+                                  : task.start_time
+                                  ? `Start: ${formatTime(task.start_time)}`
+                                  : task.finish_time
+                                  ? `End: ${formatTime(task.finish_time)}`
+                                  : 'No time set'
+                                }
+                              </span>
+                            </div>
+                          </>
+                        )}
+                        {!positioning.isFirstHour && (
+                          <div className="task-continuation">
+                            <span className="continuation-text">{task.title} (continued)</span>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          ))}
+          
+          {/* Late Hours Collapse/Expand Button */}
+          {!isLateHoursExpanded && (
+            <div className="late-hours-collapsed">
+              <div className="time-label collapsed">
+                <span className="time-display collapsed-time">10:00 PM - 11:59 PM</span>
+              </div>
+              <div className="tasks-column collapsed">
+                <button 
+                  className="expand-late-hours-button"
+                  onClick={() => setIsLateHoursExpanded(true)}
+                >
+                  <ChevronDown size={16} />
+                  <span>
+                    Show late hours 
+                    {lateHoursTaskCount > 0 && (
+                      <span className="task-count">({lateHoursTaskCount} task{lateHoursTaskCount !== 1 ? 's' : ''})</span>
+                    )}
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* Collapse Late Hours Button (when expanded) */}
+          {isLateHoursExpanded && (
+            <div className="late-hours-header">
+              <div className="time-label">
+                <span className="time-display">Late Hours</span>
+              </div>
+              <div className="tasks-column">
+                <button 
+                  className="collapse-late-hours-button"
+                  onClick={() => setIsLateHoursExpanded(false)}
+                >
+                  <ChevronUp size={16} />
+                  <span>Hide late hours (10 PM - 11 PM)</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Task Hover Tooltip */}
+        {hoveredTask && (
+          <div 
+            className={`task-tooltip ${hoveredTask ? 'visible' : ''}`}
+            style={{
+              left: `${tooltipPosition.x}px`,
+              top: `${tooltipPosition.y}px`
+            }}
+          >
+            <div className="tooltip-title">
+              {getRepeatIcon(hoveredTask.repeat_type)} {hoveredTask.title}
             </div>
             
-            <div className="tooltip-detail-row">
-              <span className="tooltip-detail-label">Time:</span>
-              <span className="tooltip-detail-value">
-                {hoveredTask.start_time && hoveredTask.finish_time
-                  ? `${formatTime(hoveredTask.start_time)} - ${formatTime(hoveredTask.finish_time)}`
-                  : hoveredTask.start_time
-                  ? `Start: ${formatTime(hoveredTask.start_time)}`
-                  : hoveredTask.finish_time
-                  ? `End: ${formatTime(hoveredTask.finish_time)}`
-                  : 'No time set'
-                }
-              </span>
-            </div>
-            
-            {hoveredTask.repeat_type && hoveredTask.repeat_type !== 'none' && (
-              <div className="tooltip-detail-row">
-                <span className="tooltip-detail-label">Repeat:</span>
-                <span className="tooltip-repeat-badge">
-                  🔄 {formatRepeatType(hoveredTask.repeat_type)}
-                </span>
+            {hoveredTask.description && (
+              <div className="tooltip-description">
+                {hoveredTask.description}
               </div>
             )}
             
-            <div className="tooltip-detail-row">
-              <span className="tooltip-detail-label">Status:</span>
-              <span className="tooltip-detail-value">
-                {hoveredTask.completed ? '✅ Completed' : '⏳ Pending'}
-              </span>
+            <div className="tooltip-details">
+              <div className="tooltip-detail-row">
+                <span className="tooltip-detail-label">Priority:</span>
+                <span 
+                  className="tooltip-priority"
+                  style={{
+                    backgroundColor: getPriorityStyles(hoveredTask.priority || 3).backgroundColor,
+                    color: getPriorityStyles(hoveredTask.priority || 3).color,
+                    border: `1px solid ${getPriorityStyles(hoveredTask.priority || 3).color}`
+                  }}
+                >
+                  P{hoveredTask.priority || 3}
+                </span>
+              </div>
+              
+              <div className="tooltip-detail-row">
+                <span className="tooltip-detail-label">Time:</span>
+                <span className="tooltip-detail-value">
+                  {hoveredTask.start_time && hoveredTask.finish_time
+                    ? `${formatTime(hoveredTask.start_time)} - ${formatTime(hoveredTask.finish_time)}`
+                    : hoveredTask.start_time
+                    ? `Start: ${formatTime(hoveredTask.start_time)}`
+                    : hoveredTask.finish_time
+                    ? `End: ${formatTime(hoveredTask.finish_time)}`
+                    : 'No time set'
+                  }
+                </span>
+              </div>
+              
+              {hoveredTask.repeat_type && hoveredTask.repeat_type !== 'none' && (
+                <div className="tooltip-detail-row">
+                  <span className="tooltip-detail-label">Repeat:</span>
+                  <span className="tooltip-repeat-badge">
+                    🔄 {formatRepeatType(hoveredTask.repeat_type)}
+                  </span>
+                </div>
+              )}
+              
+              <div className="tooltip-detail-row">
+                <span className="tooltip-detail-label">Status:</span>
+                <span className="tooltip-detail-value">
+                  {hoveredTask.completed ? '✅ Completed' : '⏳ Pending'}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {showTaskModal && (
-        <TaskModal
-          onClose={handleCloseTaskModal}
-          onSave={handleSaveTask}
-          selectedDate={today}
-          task={editingTask}
-          isEditing={!!editingTask}
-        />
-      )}
+        {showTaskModal && (
+          <TaskModal
+            onClose={handleCloseTaskModal}
+            onSave={handleSaveTask}
+            selectedDate={today}
+            task={editingTask}
+            isEditing={!!editingTask}
+          />
+        )}
+      </div>
     </div>
   )
 }
