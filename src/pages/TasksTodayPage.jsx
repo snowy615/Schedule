@@ -37,6 +37,7 @@ function TasksTodayPage() {
       return a.finish_time.localeCompare(b.finish_time)
     })
 
+  // Filter today's tasks - include ALL tasks for today (both pending and completed)
   const todayTasks = tasks
     .filter(task => isToday(parseDateSafely(task.date)))
     .sort((a, b) => {
@@ -54,6 +55,10 @@ function TasksTodayPage() {
       if (!b.finish_time) return -1
       return a.finish_time.localeCompare(b.finish_time)
     })
+
+  // Separate pending and completed tasks
+  const completedTasks = todayTasks.filter(task => task.completed);
+  const pendingTasks = todayTasks.filter(task => !task.completed);
 
   const handleAddTask = async (taskData) => {
     try {
@@ -97,9 +102,6 @@ function TasksTodayPage() {
     setShowTaskModal(false)
     setEditingTask(null)
   }
-
-  const completedTasks = todayTasks.filter(task => task.completed)
-  const pendingTasks = todayTasks.filter(task => !task.completed)
 
   const getTimeSlot = (start_time, finish_time) => {
     if (!start_time && !finish_time) return 'No time set'
