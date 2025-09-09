@@ -7,7 +7,7 @@ import SharePlanModal from './SharePlanModal'
 import { usePlans } from '../hooks/usePlans'
 import './PlanDetailModal.css'
 
-function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTask, onDeleteTask }) {
+function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTask, onDeleteTask, onIndividualTaskComplete }) {
   const [currentTaskIndex, setCurrentTaskIndex] = useState(plan.current_task_index || 0)
   const [tasks, setTasks] = useState(plan.tasks || [])
   const [editingTaskId, setEditingTaskId] = useState(null)
@@ -85,7 +85,7 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
     if (!hasIndividualPermission) return;
     
     try {
-      await setIndividualTaskStatus(plan.id, task.id, completed);
+      const result = await setIndividualTaskStatus(plan.id, task.id, completed);
       // Optimistically update UI
       setTasks(prev => 
         prev.map(t => 
@@ -103,6 +103,11 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
           // If all tasks are completed, set to tasks.length to indicate completion
           setCurrentTaskIndex(tasks.length);
         }
+      }
+      
+      // Call the callback to handle navigation
+      if (onIndividualTaskComplete) {
+        onIndividualTaskComplete(result.plan);
       }
     } catch (error) {
       console.error('Failed to update individual task status:', error)

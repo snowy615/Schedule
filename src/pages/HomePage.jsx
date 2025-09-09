@@ -58,21 +58,34 @@ function HomePage() {
       
       // Show plan on the date of the current task
       if (plan.tasks && plan.tasks.length > 0) {
-        const currentTaskIndex = plan.current_task_index || 0
-        // Ensure currentTaskIndex is within bounds
-        if (currentTaskIndex >= plan.tasks.length) {
-          // If current_task_index is out of bounds, use the last task or mark as completed
-          return false
+        let currentTask = null;
+        
+        // For individual permissions, find the first incomplete task for this user
+        if (plan.is_shared && plan.shared_permissions === 'individual') {
+          currentTask = plan.tasks.find(task => !task.completed);
+          // If all tasks are completed, use the last task
+          if (!currentTask && plan.tasks.length > 0) {
+            currentTask = plan.tasks[plan.tasks.length - 1];
+          }
+        } else {
+          // For owner/write permissions, use the current_task_index
+          const currentTaskIndex = plan.current_task_index || 0;
+          // Ensure currentTaskIndex is within bounds
+          if (currentTaskIndex >= plan.tasks.length) {
+            // If current_task_index is out of bounds, use the last task or mark as completed
+            return false;
+          }
+          currentTask = plan.tasks[currentTaskIndex];
         }
-        const currentTask = plan.tasks[currentTaskIndex]
+        
         if (currentTask && currentTask.date) {
-          return isSameDay(parseDateSafely(currentTask.date), date)
+          return isSameDay(parseDateSafely(currentTask.date), date);
         }
       }
       
       // Fallback to plan date if no current task date
-      return isSameDay(parseDateSafely(plan.date), date)
-    })
+      return isSameDay(parseDateSafely(plan.date), date);
+    });
   }
 
   // Get overdue tasks for the selected date
@@ -168,33 +181,92 @@ function HomePage() {
       
       // If plan is not completed and has a next task, navigate to that task's date
       if (updatedPlan && !updatedPlan.completed && updatedPlan.tasks && updatedPlan.tasks.length > 0) {
-        const currentTaskIndex = updatedPlan.current_task_index || 0
-        const nextTask = updatedPlan.tasks[currentTaskIndex]
+        let nextTask = null;
+        
+        // For individual permissions, find the next incomplete task for this user
+        if (updatedPlan.is_shared && updatedPlan.shared_permissions === 'individual') {
+          nextTask = updatedPlan.tasks.find(task => !task.completed);
+          // If all tasks are completed, use the last task
+          if (!nextTask && updatedPlan.tasks.length > 0) {
+            nextTask = updatedPlan.tasks[updatedPlan.tasks.length - 1];
+          }
+        } else {
+          // For owner/write permissions, use the current_task_index
+          const currentTaskIndex = updatedPlan.current_task_index || 0;
+          nextTask = updatedPlan.tasks[currentTaskIndex];
+        }
         
         if (nextTask && nextTask.date) {
-          const nextTaskDate = parseDateSafely(nextTask.date)
+          const nextTaskDate = parseDateSafely(nextTask.date);
           // Navigate calendar to show the date of the next task
-          const nextTaskMonth = startOfMonth(nextTaskDate)
+          const nextTaskMonth = startOfMonth(nextTaskDate);
           if (!isSameDay(startOfMonth(currentDate), nextTaskMonth)) {
-            setCurrentDate(nextTaskDate)
+            setCurrentDate(nextTaskDate);
           }
           // Also select that date to highlight it
-          setSelectedDate(nextTaskDate)
+          setSelectedDate(nextTaskDate);
         }
       }
       
       // Refresh the selected plan if it's currently open
       if (selectedPlan && selectedPlan.id === planId) {
         if (updatedPlan && !updatedPlan.completed) {
-          const currentTask = await getCurrentTask(planId)
-          setSelectedPlan({ ...updatedPlan, currentTask })
+          const currentTask = await getCurrentTask(planId);
+          setSelectedPlan({ ...updatedPlan, currentTask });
         } else {
           // Plan is completed, close the modal
-          setSelectedPlan(null)
+          setSelectedPlan(null);
         }
       }
     } catch (error) {
-      console.error('Failed to complete current task:', error)
+      console.error('Failed to complete current task:', error);
+    }
+  }
+
+  // Handle individual task completion and navigate to next task date
+  const handleIndividualTaskComplete = async (updatedPlan) => {
+    try {
+      // If plan is not completed and has a next task, navigate to that task's date
+      if (updatedPlan && !updatedPlan.completed && updatedPlan.tasks && updatedPlan.tasks.length > 0) {
+        let nextTask = null;
+        
+        // For individual permissions, find the next incomplete task for this user
+        if (updatedPlan.is_shared && updatedPlan.shared_permissions === 'individual') {
+          nextTask = updatedPlan.tasks.find(task => !task.completed);
+          // If all tasks are completed, use the last task
+          if (!nextTask && updatedPlan.tasks.length > 0) {
+            nextTask = updatedPlan.tasks[updatedPlan.tasks.length - 1];
+          }
+        } else {
+          // For owner/write permissions, use the current_task_index
+          const currentTaskIndex = updatedPlan.current_task_index || 0;
+          nextTask = updatedPlan.tasks[currentTaskIndex];
+        }
+        
+        if (nextTask && nextTask.date) {
+          const nextTaskDate = parseDateSafely(nextTask.date);
+          // Navigate calendar to show the date of the next task
+          const nextTaskMonth = startOfMonth(nextTaskDate);
+          if (!isSameDay(startOfMonth(currentDate), nextTaskMonth)) {
+            setCurrentDate(nextTaskDate);
+          }
+          // Also select that date to highlight it
+          setSelectedDate(nextTaskDate);
+        }
+      }
+      
+      // Refresh the selected plan if it's currently open
+      if (selectedPlan && selectedPlan.id === updatedPlan.id) {
+        if (updatedPlan && !updatedPlan.completed) {
+          const currentTask = await getCurrentTask(updatedPlan.id);
+          setSelectedPlan({ ...updatedPlan, currentTask });
+        } else {
+          // Plan is completed, close the modal
+          setSelectedPlan(null);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to handle individual task completion:', error);
     }
   }
 
@@ -822,6 +894,7 @@ function HomePage() {
           onAddTask={handleAddTaskToPlan}
           onUpdateTask={handleUpdatePlanTask}
           onDeleteTask={handleDeletePlanTask}
+          onIndividualTaskComplete={handleIndividualTaskComplete}
         />
       )}
     </div>
