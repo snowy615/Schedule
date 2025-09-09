@@ -175,8 +175,8 @@ function SharePlanModal({ plan, onClose, onShareSuccess }) {
                 onChange={(e) => setPermissions(e.target.value)}
 
               >
-                <option value="read">Read Only</option>
-                <option value="write">Read & Write</option>
+                <option value="read">View Only</option>
+                <option value="write">Collaborate</option>
               </select>
               <p className="permission-note">
                 Select the level of access for the shared user.
@@ -225,7 +225,7 @@ function SharePlanModal({ plan, onClose, onShareSuccess }) {
                     </div>
                     <div className="user-actions">
                       <span className="permission-badge">
-                        {user.permissions}
+                        {user.permissions === 'write' ? 'Collaborator' : 'Viewer'}
                       </span>
                       <button
                         onClick={() => handleUnshare(user.id, user.email)}
