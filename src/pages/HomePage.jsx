@@ -6,6 +6,7 @@ import { usePlans } from '../hooks/usePlans'
 import TaskModal from '../components/TaskModal'
 import PlanModal from '../components/PlanModal'
 import PlanDetailModal from '../components/PlanDetailModal'
+import apiService from '../services/apiService'
 import { formatDateForAPI, formatDateForAPIWithDelay, parseDateSafely } from '../utils/dateUtils'
 import { getPriorityStyles } from '../utils/priorityUtils'
 import { formatRepeatType, getRepeatIcon } from '../utils/repeatUtils'
@@ -150,11 +151,14 @@ function HomePage() {
 
   const handlePlanClick = async (plan) => {
     try {
-      // For shared plans, we don't need to fetch the current task separately
-      // as it's already included in the plan data
-      setSelectedPlan(plan);
+      // For shared plans, we need to fetch the latest plan data to ensure
+      // we have the correct permissions information
+      const updatedPlan = await apiService.getPlan(plan.id);
+      setSelectedPlan(updatedPlan);
     } catch (error) {
-      console.error('Failed to get plan details:', error)
+      console.error('Failed to get plan details:', error);
+      // Fallback to the original plan data if API call fails
+      setSelectedPlan(plan);
     }
   }
 
