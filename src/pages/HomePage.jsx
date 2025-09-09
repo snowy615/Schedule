@@ -412,9 +412,18 @@ function HomePage() {
               <p className="no-plans-message">No active plans</p>
             ) : (
               activePlans.map(plan => {
-                // Calculate completion percentage
+                // Calculate completion percentage based on individual permissions
                 const totalTasks = plan.tasks ? plan.tasks.length : 0;
-                const completedTasks = plan.tasks ? plan.tasks.filter(t => t.completed).length : 0;
+                let completedTasks = 0;
+                
+                if (plan.is_shared && plan.shared_permissions === 'individual') {
+                  // For individual users, count tasks completed by this user
+                  completedTasks = plan.tasks ? plan.tasks.filter(t => t.completed).length : 0;
+                } else {
+                  // For owner/write users, count globally completed tasks
+                  completedTasks = plan.tasks ? plan.tasks.filter(t => t.completed).length : 0;
+                }
+                
                 const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
                 
                 return (
