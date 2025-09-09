@@ -515,6 +515,10 @@ function HomePage() {
                             draggable
                             onDragStart={(e) => handleDragStart(e, task)}
                             onDragEnd={handleDragEnd}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditTask(task);
+                            }}
                           >
                             {getRepeatIcon(task.repeat_type)} {task.title.substring(0, 18)}
                             {task.title.length > 18 ? '...' : ''}
@@ -698,6 +702,10 @@ function HomePage() {
                             draggable
                             onDragStart={(e) => handleDragStart(e, task)}
                             onDragEnd={handleDragEnd}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEditTask(task)
+                            }}
                         >
                           <input
                             type="checkbox"
@@ -766,6 +774,7 @@ function HomePage() {
                         </div>
                       )
                     })}
+
                   </>
                 )}
               </div>

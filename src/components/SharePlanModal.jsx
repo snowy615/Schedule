@@ -126,7 +126,7 @@ function SharePlanModal({ plan, onClose, onShareSuccess }) {
         <div className="modal-body">
           <div className="plan-info">
             <h3>{plan.title}</h3>
-            <p>Share this plan with other users so they can view it.</p>
+            <p>Share this plan with other users.</p>
           </div>
 
           <form onSubmit={handleShare} className="share-form">
@@ -173,13 +173,13 @@ function SharePlanModal({ plan, onClose, onShareSuccess }) {
                 id="permissions"
                 value={permissions}
                 onChange={(e) => setPermissions(e.target.value)}
-                disabled
+
               >
                 <option value="read">Read Only</option>
                 <option value="write">Read & Write</option>
               </select>
               <p className="permission-note">
-                Note: Currently only read-only permissions are supported.
+                Select the level of access for the shared user.
               </p>
             </div>
 

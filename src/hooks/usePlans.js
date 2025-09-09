@@ -68,6 +68,12 @@ export function usePlans() {
       return updatedPlan
     } catch (error) {
       console.error('Failed to complete current task:', error)
+      // Check if it's a permission error
+      if (error.message && error.message.includes('Insufficient permissions')) {
+        alert('You do not have permission to modify this plan.')
+      } else {
+        alert('Failed to complete task. Please try again.')
+      }
       throw error
     }
   }
@@ -97,6 +103,12 @@ export function usePlans() {
       return updatedPlan
     } catch (error) {
       console.error('Failed to add task to plan:', error)
+      // Check if it's a permission error
+      if (error.message && error.message.includes('Insufficient permissions')) {
+        alert('You do not have permission to modify this plan.')
+      } else {
+        alert('Failed to add task to plan. Please try again.')
+      }
       throw error
     }
   }
@@ -114,6 +126,12 @@ export function usePlans() {
       return updatedPlan
     } catch (error) {
       console.error('Failed to update plan task:', error)
+      // Check if it's a permission error
+      if (error.message && error.message.includes('Insufficient permissions')) {
+        alert('You do not have permission to modify this plan.')
+      } else {
+        alert('Failed to update task. Please try again.')
+      }
       throw error
     }
   }
@@ -131,6 +149,12 @@ export function usePlans() {
       return updatedPlan
     } catch (error) {
       console.error('Failed to delete plan task:', error)
+      // Check if it's a permission error
+      if (error.message && error.message.includes('Insufficient permissions')) {
+        alert('You do not have permission to modify this plan.')
+      } else {
+        alert('Failed to delete task. Please try again.')
+      }
       throw error
     }
   }

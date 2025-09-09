@@ -190,6 +190,7 @@ class ApiService {
     return data.plan;
   }
 
+  // Update a task in a plan
   async updatePlanTask(planId, taskId, updates) {
     const data = await this.apiCall(`/plans/${planId}/tasks/${taskId}`, {
       method: 'PUT',
@@ -198,6 +199,7 @@ class ApiService {
     return data.plan;
   }
 
+  // Delete a task from a plan
   async deletePlanTask(planId, taskId) {
     const data = await this.apiCall(`/plans/${planId}/tasks/${taskId}`, {
       method: 'DELETE',

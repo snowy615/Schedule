@@ -15,6 +15,9 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
   const [newTask, setNewTask] = useState({ title: '', description: '', priority: 3, date: formatDateForAPI(new Date()) })
   const [showShareModal, setShowShareModal] = useState(false)
 
+  // Check if the user has write permissions for this plan
+  const hasWritePermission = !plan.is_shared || (plan.shared_permissions === 'write');
+
   const priorityOptions = [
     { value: 1, label: 'P1 - Urgent', color: '#dc2626' },
     { value: 2, label: 'P2 - High', color: '#ea580c' },
@@ -200,6 +203,8 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
                   <button 
                     onClick={handleCompleteCurrentTask}
                     className="complete-task-button"
+                    disabled={!hasWritePermission}
+                    title={!hasWritePermission ? "You don't have permission to modify this plan" : ""}
                   >
                     <CheckCircle size={20} />
                     Complete Task
@@ -214,15 +219,15 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
                 <button 
                   onClick={() => setShowAddTask(true)}
                   className="add-task-button"
-                  disabled={isCompleted || plan.is_shared}
-                  title={plan.is_shared ? "Cannot modify shared plans" : "Add task"}
+                  disabled={isCompleted || !hasWritePermission}
+                  title={!hasWritePermission ? "You don't have permission to modify this plan" : "Add task"}
                 >
                   <Plus size={16} />
                   Add Task
                 </button>
               </div>
               
-              {showAddTask && (
+              {showAddTask && hasWritePermission && (
                 <div className="add-task-form">
                   <div className="form-row">
                     <input
@@ -369,7 +374,7 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
                                 >
                                   P{task.priority || 3}
                                 </span>
-                                {status !== 'completed' && !plan.is_shared && (
+                                {status !== 'completed' && hasWritePermission && (
                                   <>
                                     <button
                                       onClick={() => handleEditTask(task)}

@@ -296,7 +296,7 @@ class Plan {
     });
   }
 
-  // Complete current task and move to next (only for plan owners)
+  // Complete current task and move to next (for plan owners and users with write permissions)
   static async completeCurrentTask(planId, userId) {
     return new Promise((resolve, reject) => {
       const db = database.getDB();
@@ -304,8 +304,13 @@ class Plan {
       db.serialize(() => {
         db.run('BEGIN TRANSACTION');
         
-        // Get the plan and current task
-        db.get('SELECT * FROM plans WHERE id = ? AND user_id = ?', [planId, userId], (err, plan) => {
+        // Get the plan and check if user has permission to modify it
+        db.get(`
+          SELECT p.*, sp.permissions as shared_permissions
+          FROM plans p
+          LEFT JOIN shared_plans sp ON p.id = sp.plan_id AND sp.shared_with_user_id = ?
+          WHERE p.id = ? AND (p.user_id = ? OR sp.shared_with_user_id = ?)
+        `, [userId, planId, userId, userId], (err, plan) => {
           if (err) {
             db.run('ROLLBACK');
             reject(err);
@@ -315,6 +320,13 @@ class Plan {
           if (!plan) {
             db.run('ROLLBACK');
             reject(new Error('Plan not found or unauthorized'));
+            return;
+          }
+          
+          // Check permissions - only owner or users with write permissions can modify
+          if (plan.user_id !== userId && plan.shared_permissions !== 'write') {
+            db.run('ROLLBACK');
+            reject(new Error('Insufficient permissions to modify this plan'));
             return;
           }
           
@@ -403,51 +415,8 @@ class Plan {
       db.serialize(() => {
         db.run('BEGIN TRANSACTION');
         
-        // Delete all tasks for this plan
-        db.run('DELETE FROM tasks WHERE plan_id = ? AND user_id = ?', [id, userId], (taskErr) => {
-          if (taskErr) {
-            db.run('ROLLBACK');
-            reject(taskErr);
-            return;
-          }
-          
-          // Delete the plan
-          db.run('DELETE FROM plans WHERE id = ? AND user_id = ?', [id, userId], function(planErr) {
-            if (planErr) {
-              db.run('ROLLBACK');
-              reject(planErr);
-              return;
-            }
-            
-            if (this.changes === 0) {
-              db.run('ROLLBACK');
-              reject(new Error('Plan not found or unauthorized'));
-              return;
-            }
-            
-            db.run('COMMIT', (commitErr) => {
-              if (commitErr) {
-                reject(commitErr);
-              } else {
-                resolve({ message: 'Plan deleted successfully' });
-              }
-            });
-          });
-        });
-      });
-    });
-  }
-
-  // Add a task to an existing plan (only for plan owners)
-  static async addTask(planId, userId, taskData) {
-    return new Promise((resolve, reject) => {
-      const db = database.getDB();
-      
-      db.serialize(() => {
-        db.run('BEGIN TRANSACTION');
-        
-        // Verify plan exists and belongs to user
-        db.get('SELECT * FROM plans WHERE id = ? AND user_id = ?', [planId, userId], (err, plan) => {
+        // Verify plan exists and belongs to user (only owner can delete)
+        db.get('SELECT * FROM plans WHERE id = ? AND user_id = ?', [id, userId], (err, plan) => {
           if (err) {
             db.run('ROLLBACK');
             reject(err);
@@ -457,6 +426,76 @@ class Plan {
           if (!plan) {
             db.run('ROLLBACK');
             reject(new Error('Plan not found or unauthorized'));
+            return;
+          }
+          
+          // Delete all tasks for this plan
+          db.run('DELETE FROM tasks WHERE plan_id = ? AND user_id = ?', [id, userId], (taskErr) => {
+            if (taskErr) {
+              db.run('ROLLBACK');
+              reject(taskErr);
+              return;
+            }
+            
+            // Delete the plan
+            db.run('DELETE FROM plans WHERE id = ? AND user_id = ?', [id, userId], function(planErr) {
+              if (planErr) {
+                db.run('ROLLBACK');
+                reject(planErr);
+                return;
+              }
+              
+              if (this.changes === 0) {
+                db.run('ROLLBACK');
+                reject(new Error('Plan not found or unauthorized'));
+                return;
+              }
+              
+              db.run('COMMIT', (commitErr) => {
+                if (commitErr) {
+                  reject(commitErr);
+                } else {
+                  resolve({ message: 'Plan deleted successfully' });
+                }
+              });
+            });
+          });
+        });
+      });
+    });
+  }
+
+  // Add a task to an existing plan (for plan owners and users with write permissions)
+  static async addTask(planId, userId, taskData) {
+    return new Promise((resolve, reject) => {
+      const db = database.getDB();
+      
+      db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+        
+        // Verify plan exists and user has permission to modify it
+        db.get(`
+          SELECT p.*, sp.permissions as shared_permissions
+          FROM plans p
+          LEFT JOIN shared_plans sp ON p.id = sp.plan_id AND sp.shared_with_user_id = ?
+          WHERE p.id = ? AND (p.user_id = ? OR sp.shared_with_user_id = ?)
+        `, [userId, planId, userId, userId], (err, plan) => {
+          if (err) {
+            db.run('ROLLBACK');
+            reject(err);
+            return;
+          }
+          
+          if (!plan) {
+            db.run('ROLLBACK');
+            reject(new Error('Plan not found or unauthorized'));
+            return;
+          }
+          
+          // Check permissions - only owner or users with write permissions can modify
+          if (plan.user_id !== userId && plan.shared_permissions !== 'write') {
+            db.run('ROLLBACK');
+            reject(new Error('Insufficient permissions to modify this plan'));
             return;
           }
           
@@ -495,7 +534,7 @@ class Plan {
     });
   }
 
-  // Update a task in a plan (only for plan owners)
+  // Update a task in a plan (for plan owners and users with write permissions)
   static async updateTask(planId, taskId, userId, updates) {
     return new Promise((resolve, reject) => {
       const db = database.getDB();
@@ -503,8 +542,13 @@ class Plan {
       db.serialize(() => {
         db.run('BEGIN TRANSACTION');
         
-        // Verify plan exists and belongs to user
-        db.get('SELECT * FROM plans WHERE id = ? AND user_id = ?', [planId, userId], (err, plan) => {
+        // Verify plan exists and user has permission to modify it
+        db.get(`
+          SELECT p.*, sp.permissions as shared_permissions
+          FROM plans p
+          LEFT JOIN shared_plans sp ON p.id = sp.plan_id AND sp.shared_with_user_id = ?
+          WHERE p.id = ? AND (p.user_id = ? OR sp.shared_with_user_id = ?)
+        `, [userId, planId, userId, userId], (err, plan) => {
           if (err) {
             db.run('ROLLBACK');
             reject(err);
@@ -514,6 +558,13 @@ class Plan {
           if (!plan) {
             db.run('ROLLBACK');
             reject(new Error('Plan not found or unauthorized'));
+            return;
+          }
+          
+          // Check permissions - only owner or users with write permissions can modify
+          if (plan.user_id !== userId && plan.shared_permissions !== 'write') {
+            db.run('ROLLBACK');
+            reject(new Error('Insufficient permissions to modify this plan'));
             return;
           }
           
@@ -597,7 +648,7 @@ class Plan {
     });
   }
 
-  // Delete a task from a plan (only for plan owners)
+  // Delete a task from a plan (for plan owners and users with write permissions)
   static async deleteTask(planId, taskId, userId) {
     return new Promise((resolve, reject) => {
       const db = database.getDB();
@@ -605,8 +656,13 @@ class Plan {
       db.serialize(() => {
         db.run('BEGIN TRANSACTION');
         
-        // Verify plan exists and belongs to user
-        db.get('SELECT * FROM plans WHERE id = ? AND user_id = ?', [planId, userId], (err, plan) => {
+        // Verify plan exists and user has permission to modify it
+        db.get(`
+          SELECT p.*, sp.permissions as shared_permissions
+          FROM plans p
+          LEFT JOIN shared_plans sp ON p.id = sp.plan_id AND sp.shared_with_user_id = ?
+          WHERE p.id = ? AND (p.user_id = ? OR sp.shared_with_user_id = ?)
+        `, [userId, planId, userId, userId], (err, plan) => {
           if (err) {
             db.run('ROLLBACK');
             reject(err);
@@ -616,6 +672,13 @@ class Plan {
           if (!plan) {
             db.run('ROLLBACK');
             reject(new Error('Plan not found or unauthorized'));
+            return;
+          }
+          
+          // Check permissions - only owner or users with write permissions can modify
+          if (plan.user_id !== userId && plan.shared_permissions !== 'write') {
+            db.run('ROLLBACK');
+            reject(new Error('Insufficient permissions to modify this plan'));
             return;
           }
           
