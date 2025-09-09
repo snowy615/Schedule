@@ -4,6 +4,7 @@ import { X, CheckCircle, Circle, Edit2, Plus, Trash2, Save, Calendar, Share2, Us
 import { getPriorityStyles } from '../utils/priorityUtils'
 import { formatDateForAPI, parseDateSafely } from '../utils/dateUtils'
 import SharePlanModal from './SharePlanModal'
+import { usePlans } from '../hooks/usePlans'
 import './PlanDetailModal.css'
 
 function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTask, onDeleteTask }) {
@@ -14,9 +15,12 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
   const [showAddTask, setShowAddTask] = useState(false)
   const [newTask, setNewTask] = useState({ title: '', description: '', priority: 3, date: formatDateForAPI(new Date()) })
   const [showShareModal, setShowShareModal] = useState(false)
+  const { setIndividualTaskStatus } = usePlans()
 
   // Check if the user has write permissions for this plan
   const hasWritePermission = !plan.is_shared || (plan.shared_permissions === 'write');
+  // Check if the user has individual permissions for this plan
+  const hasIndividualPermission = plan.is_shared && plan.shared_permissions === 'individual';
 
   const priorityOptions = [
     { value: 1, label: 'P1 - Urgent', color: '#dc2626' },
@@ -35,18 +39,74 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
 
   // Calculate currentTask based on currentTaskIndex and tasks array
   const currentTask = tasks.length > 0 && currentTaskIndex < tasks.length ? tasks[currentTaskIndex] : null
-  const isCompleted = plan.completed || currentTaskIndex >= tasks.length
+  const isCompleted = hasIndividualPermission ? 
+    (tasks.length > 0 && tasks.every(task => task.completed)) : 
+    (currentTaskIndex >= tasks.length)
+
+  // Calculate progress for individual users
+  const calculateProgress = () => {
+    if (tasks.length === 0) return 0;
+    
+    if (hasIndividualPermission) {
+      // For individual users, progress is based on completed tasks
+      const completedCount = tasks.filter(task => task.completed).length;
+      return Math.round((completedCount / tasks.length) * 100);
+    } else {
+      // For owner/write users, progress is based on current task index
+      return Math.round((currentTaskIndex / tasks.length) * 100);
+    }
+  };
+
+  const completedCount = hasIndividualPermission ? 
+    tasks.filter(task => task.completed).length : 
+    currentTaskIndex;
 
   const handleCompleteCurrentTask = () => {
     if (!isCompleted && currentTask) {
-      onCompleteTask()
+      if (hasIndividualPermission) {
+        // For individual permission, use the individual task completion handler
+        handleIndividualTaskComplete(currentTask, true);
+      } else {
+        // For owner/write permissions, use the standard completion
+        onCompleteTask();
+        // Optimistically update UI
+        setTasks(prev => 
+          prev.map((task, index) => 
+            index === currentTaskIndex ? { ...task, completed: true } : task
+          )
+        );
+        setCurrentTaskIndex(prev => prev + 1);
+      }
+    }
+  }
+
+  // Add individual task completion handler
+  const handleIndividualTaskComplete = async (task, completed) => {
+    if (!hasIndividualPermission) return;
+    
+    try {
+      await setIndividualTaskStatus(plan.id, task.id, completed);
       // Optimistically update UI
       setTasks(prev => 
-        prev.map((task, index) => 
-          index === currentTaskIndex ? { ...task, completed: true } : task
+        prev.map(t => 
+          t.id === task.id ? { ...t, completed } : t
         )
       )
-      setCurrentTaskIndex(prev => prev + 1)
+      
+      // For individual permission, we need to update the current task index if this was the current task
+      if (completed && task.id === currentTask?.id) {
+        // Find the next incomplete task
+        const nextIndex = tasks.findIndex((t, index) => index > currentTaskIndex && !t.completed);
+        if (nextIndex !== -1) {
+          setCurrentTaskIndex(nextIndex);
+        } else {
+          // If all tasks are completed, set to tasks.length to indicate completion
+          setCurrentTaskIndex(tasks.length);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update individual task status:', error)
+      alert('Failed to update task status. Please try again.')
     }
   }
 
@@ -118,9 +178,15 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
   }
 
   const getTaskStatus = (task, index) => {
-    if (index < currentTaskIndex) return 'completed'
-    if (index === currentTaskIndex && !isCompleted) return 'current'
-    return 'pending'
+    if (hasIndividualPermission) {
+      // For individual users, status is based on task completion
+      return task.completed ? 'completed' : 'pending';
+    } else {
+      // For owner/write users, status is based on current task index
+      if (index < currentTaskIndex) return 'completed';
+      if (index === currentTaskIndex && !isCompleted) return 'current';
+      return 'pending';
+    }
   }
 
   return (
@@ -150,7 +216,8 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
             <span>Date: {format(parseDateSafely(plan.date), 'EEEE, MMMM d, yyyy')}</span>
             {plan.is_shared && (
               <span className="shared-badge">
-                {plan.shared_permissions === 'write' ? 'Collaborator' : 'Viewer'}
+                {plan.shared_permissions === 'write' ? 'Collaborator' : 
+                 plan.shared_permissions === 'individual' ? 'Individual' : 'Viewer'}
               </span>
             )}
             {!plan.is_shared && (
@@ -169,7 +236,7 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
               <div className="progress-header">
                 <h3>Progress</h3>
                 <div className="progress-stats">
-                  <span className="completed-count">{currentTaskIndex}</span>
+                  <span className="completed-count">{completedCount}</span>
                   <span className="separator">/</span>
                   <span className="total-count">{tasks.length}</span>
                   <span className="progress-label">tasks completed</span>
@@ -179,7 +246,7 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
               <div className="progress-bar">
                 <div 
                   className="progress-fill" 
-                  style={{ width: `${tasks.length > 0 ? (currentTaskIndex / tasks.length) * 100 : 0}%` }}
+                  style={{ width: `${calculateProgress()}%` }}
                 ></div>
               </div>
             </div>
@@ -202,15 +269,27 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
                   {currentTask.description && (
                     <p className="task-description">{currentTask.description}</p>
                   )}
-                  <button 
-                    onClick={handleCompleteCurrentTask}
-                    className="complete-task-button"
-                    disabled={!hasWritePermission}
-                    title={!hasWritePermission ? "You don't have permission to modify this plan" : ""}
-                  >
-                    <CheckCircle size={20} />
-                    Complete Task
-                  </button>
+                  {/* Update the complete task button to handle individual permission */}
+                  {hasIndividualPermission ? (
+                    <button 
+                      onClick={() => handleIndividualTaskComplete(currentTask, true)}
+                      className="complete-task-button"
+                      title="Mark task as completed for you"
+                    >
+                      <CheckCircle size={20} />
+                      Complete Task (Individual)
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={handleCompleteCurrentTask}
+                      className="complete-task-button"
+                      disabled={!hasWritePermission}
+                      title={!hasWritePermission ? "You don't have permission to modify this plan" : ""}
+                    >
+                      <CheckCircle size={20} />
+                      Complete Task
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -376,6 +455,16 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
                                 >
                                   P{task.priority || 3}
                                 </span>
+                                {/* Add individual task completion checkbox */}
+                                {hasIndividualPermission && (
+                                  <input
+                                    type="checkbox"
+                                    checked={task.completed || false}
+                                    onChange={(e) => handleIndividualTaskComplete(task, e.target.checked)}
+                                    className="individual-task-checkbox"
+                                    title="Mark task as completed for you"
+                                  />
+                                )}
                                 {status !== 'completed' && hasWritePermission && (
                                   <>
                                     <button

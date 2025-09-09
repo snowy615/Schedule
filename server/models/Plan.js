@@ -156,42 +156,93 @@ class Plan {
             return;
           }
           
-          // Get tasks for all plans in one query
+          // Get completion status for all plans
           const planIds = planRows.map(plan => plan.id);
           const placeholders = planIds.map(() => '?').join(',');
           
+          // Get plan completion status
           db.all(`
-            SELECT * FROM tasks 
-            WHERE plan_id IN (${placeholders})
-            ORDER BY plan_id ASC, plan_order ASC
-          `, planIds, (taskErr, taskRows) => {
-            if (taskErr) {
-              reject(taskErr);
+            SELECT plan_id, user_id, completed FROM plan_completion_status
+            WHERE plan_id IN (${placeholders}) AND user_id = ?
+          `, [...planIds, userId], async (completionErr, completionRows) => {
+            if (completionErr) {
+              reject(completionErr);
               return;
             }
             
-            // Group tasks by plan_id
-            const tasksByPlanId = {};
-            taskRows.forEach(task => {
-              if (!tasksByPlanId[task.plan_id]) {
-                tasksByPlanId[task.plan_id] = [];
-              }
-              tasksByPlanId[task.plan_id].push({
-                ...task,
-                completed: Boolean(task.completed)
-              });
+            // Create a map of plan completion status
+            const completionMap = {};
+            completionRows.forEach(row => {
+              completionMap[row.plan_id] = row.completed;
             });
             
-            // Combine plans with their tasks
-            const plansWithTasks = planRows.map(plan => ({
-              ...plan,
-              completed: Boolean(plan.completed),
-              tasks: tasksByPlanId[plan.id] || [],
-              is_shared: plan.shared_with_user_id !== null && plan.shared_with_user_id == userId, // Mark if this is a shared plan for this user
-              shared_permissions: plan.shared_permissions || null
-            }));
-            
-            resolve(plansWithTasks);
+            // Get tasks for all plans in one query
+            db.all(`
+              SELECT * FROM tasks 
+              WHERE plan_id IN (${placeholders})
+              ORDER BY plan_id ASC, plan_order ASC
+            `, planIds, async (taskErr, taskRows) => {
+              if (taskErr) {
+                reject(taskErr);
+                return;
+              }
+              
+              // For plans with individual permission, get individual task statuses
+              const individualTaskStatuses = {};
+              for (const plan of planRows) {
+                if (plan.shared_with_user_id !== null && plan.shared_with_user_id == userId && plan.shared_permissions === 'individual') {
+                  const statuses = await Plan.getIndividualTaskStatusesForPlan(plan.id, userId);
+                  individualTaskStatuses[plan.id] = statuses.reduce((acc, status) => {
+                    acc[status.task_id] = status;
+                    return acc;
+                  }, {});
+                }
+              }
+              
+              // Group tasks by plan_id
+              const tasksByPlanId = {};
+              taskRows.forEach(task => {
+                if (!tasksByPlanId[task.plan_id]) {
+                  tasksByPlanId[task.plan_id] = [];
+                }
+                
+                // For individual plans, override task completion status with individual status
+                let taskWithStatus = {
+                  ...task,
+                  completed: Boolean(task.completed)
+                };
+                
+                if (individualTaskStatuses[task.plan_id] && individualTaskStatuses[task.plan_id][task.id]) {
+                  taskWithStatus.completed = individualTaskStatuses[task.plan_id][task.id].completed;
+                  taskWithStatus.individual_status = individualTaskStatuses[task.plan_id][task.id];
+                }
+                
+                tasksByPlanId[task.plan_id].push(taskWithStatus);
+              });
+              
+              // Combine plans with their tasks and completion status
+              const plansWithTasks = planRows.map(plan => {
+                // Determine if plan is completed based on user's completion status
+                let isCompleted = false;
+                if (completionMap.hasOwnProperty(plan.id)) {
+                  // Use user-specific completion status
+                  isCompleted = Boolean(completionMap[plan.id]);
+                } else {
+                  // Fallback to original plan completion status for backward compatibility
+                  isCompleted = Boolean(plan.completed);
+                }
+                
+                return {
+                  ...plan,
+                  completed: isCompleted,
+                  tasks: tasksByPlanId[plan.id] || [],
+                  is_shared: plan.shared_with_user_id !== null && plan.shared_with_user_id == userId, // Mark if this is a shared plan for this user
+                  shared_permissions: plan.shared_permissions || null
+                };
+              });
+              
+              resolve(plansWithTasks);
+            });
           });
         });
       } catch (error) {
@@ -212,7 +263,7 @@ class Plan {
         LEFT JOIN shared_plans sp ON p.id = sp.plan_id AND sp.shared_with_user_id = ?
         WHERE (p.user_id = ? OR sp.shared_with_user_id = ?) AND p.date = ?
         ORDER BY p.created_at ASC
-      `, [userId, userId, userId, date], (err, planRows) => {
+      `, [userId, userId, userId, date], async (err, planRows) => {
         if (err) {
           reject(err);
           return;
@@ -223,42 +274,93 @@ class Plan {
           return;
         }
         
-        // Get tasks for all plans in one query
+        // Get completion status for all plans
         const planIds = planRows.map(plan => plan.id);
         const placeholders = planIds.map(() => '?').join(',');
         
+        // Get plan completion status
         db.all(`
-          SELECT * FROM tasks 
-          WHERE plan_id IN (${placeholders})
-          ORDER BY plan_id ASC, plan_order ASC
-        `, planIds, (taskErr, taskRows) => {
-          if (taskErr) {
-            reject(taskErr);
+          SELECT plan_id, user_id, completed FROM plan_completion_status
+          WHERE plan_id IN (${placeholders}) AND user_id = ?
+        `, [...planIds, userId], async (completionErr, completionRows) => {
+          if (completionErr) {
+            reject(completionErr);
             return;
           }
           
-          // Group tasks by plan_id
-          const tasksByPlanId = {};
-          taskRows.forEach(task => {
-            if (!tasksByPlanId[task.plan_id]) {
-              tasksByPlanId[task.plan_id] = [];
-            }
-            tasksByPlanId[task.plan_id].push({
-              ...task,
-              completed: Boolean(task.completed)
-            });
+          // Create a map of plan completion status
+          const completionMap = {};
+          completionRows.forEach(row => {
+            completionMap[row.plan_id] = row.completed;
           });
           
-          // Combine plans with their tasks
-          const plansWithTasks = planRows.map(plan => ({
-            ...plan,
-            completed: Boolean(plan.completed),
-            tasks: tasksByPlanId[plan.id] || [],
-            is_shared: plan.shared_with_user_id !== null && plan.shared_with_user_id == userId, // Mark if this is a shared plan for this user
-            shared_permissions: plan.shared_permissions || null
-          }));
-          
-          resolve(plansWithTasks);
+          // Get tasks for all plans in one query
+          db.all(`
+            SELECT * FROM tasks 
+            WHERE plan_id IN (${placeholders})
+            ORDER BY plan_id ASC, plan_order ASC
+          `, planIds, async (taskErr, taskRows) => {
+            if (taskErr) {
+              reject(taskErr);
+              return;
+            }
+            
+            // For plans with individual permission, get individual task statuses
+            const individualTaskStatuses = {};
+            for (const plan of planRows) {
+              if (plan.shared_with_user_id !== null && plan.shared_with_user_id == userId && plan.shared_permissions === 'individual') {
+                const statuses = await Plan.getIndividualTaskStatusesForPlan(plan.id, userId);
+                individualTaskStatuses[plan.id] = statuses.reduce((acc, status) => {
+                  acc[status.task_id] = status;
+                  return acc;
+                }, {});
+              }
+            }
+            
+            // Group tasks by plan_id
+            const tasksByPlanId = {};
+            taskRows.forEach(task => {
+              if (!tasksByPlanId[task.plan_id]) {
+                tasksByPlanId[task.plan_id] = [];
+              }
+              
+              // For individual plans, override task completion status with individual status
+              let taskWithStatus = {
+                ...task,
+                completed: Boolean(task.completed)
+              };
+              
+              if (individualTaskStatuses[task.plan_id] && individualTaskStatuses[task.plan_id][task.id]) {
+                taskWithStatus.completed = individualTaskStatuses[task.plan_id][task.id].completed;
+                taskWithStatus.individual_status = individualTaskStatuses[task.plan_id][task.id];
+              }
+              
+              tasksByPlanId[task.plan_id].push(taskWithStatus);
+            });
+            
+            // Combine plans with their tasks and completion status
+            const plansWithTasks = planRows.map(plan => {
+              // Determine if plan is completed based on user's completion status
+              let isCompleted = false;
+              if (completionMap.hasOwnProperty(plan.id)) {
+                // Use user-specific completion status
+                isCompleted = Boolean(completionMap[plan.id]);
+              } else {
+                // Fallback to original plan completion status for backward compatibility
+                isCompleted = Boolean(plan.completed);
+              }
+              
+              return {
+                ...plan,
+                completed: isCompleted,
+                tasks: tasksByPlanId[plan.id] || [],
+                is_shared: plan.shared_with_user_id !== null && plan.shared_with_user_id == userId, // Mark if this is a shared plan for this user
+                shared_permissions: plan.shared_permissions || null
+              };
+            });
+            
+            resolve(plansWithTasks);
+          });
         });
       });
     });
@@ -324,84 +426,189 @@ class Plan {
           }
           
           // Check permissions - only owner or users with write permissions can modify
-          if (plan.user_id !== userId && plan.shared_permissions !== 'write') {
+          // For individual permission, users can only update their own task status
+          if (plan.user_id !== userId && plan.shared_permissions !== 'write' && plan.shared_permissions !== 'individual') {
             db.run('ROLLBACK');
             reject(new Error('Insufficient permissions to modify this plan'));
             return;
           }
           
-          // Get the current task
-          db.get(`
-            SELECT * FROM tasks 
-            WHERE plan_id = ? AND plan_order = ?
-          `, [planId, plan.current_task_index], (taskErr, task) => {
-            if (taskErr) {
-              db.run('ROLLBACK');
-              reject(taskErr);
-              return;
-            }
-            
-            if (!task) {
-              db.run('ROLLBACK');
-              reject(new Error('Current task not found'));
-              return;
-            }
-            
-            // Mark current task as completed
-            db.run(`
-              UPDATE tasks 
-              SET completed = 1, updated_at = CURRENT_TIMESTAMP 
-              WHERE id = ?
-            `, [task.id], (updateErr) => {
-              if (updateErr) {
+          // If user has individual permission, we need to handle task completion differently
+          if (plan.shared_permissions === 'individual') {
+            // For individual permission, we'll need to get the current task and set individual status
+            // Get the current task based on current_task_index
+            db.get(`
+              SELECT * FROM tasks 
+              WHERE plan_id = ? AND plan_order = ?
+            `, [planId, plan.current_task_index], (taskErr, task) => {
+              if (taskErr) {
                 db.run('ROLLBACK');
-                reject(updateErr);
+                reject(taskErr);
                 return;
               }
               
-              // Check if there are more tasks
-              db.get(`
-                SELECT COUNT(*) as total_tasks FROM tasks 
-                WHERE plan_id = ?
-              `, [planId], (countErr, countResult) => {
-                if (countErr) {
+              if (!task) {
+                db.run('ROLLBACK');
+                reject(new Error('Current task not found'));
+                return;
+              }
+              
+              // Set individual task status instead of updating the main task
+              Plan.setIndividualTaskStatus(task.id, userId, true)
+                .then(() => {
+                  // Check if there are more tasks
+                  db.get(`
+                    SELECT COUNT(*) as total_tasks FROM tasks 
+                    WHERE plan_id = ?
+                  `, [planId], (countErr, countResult) => {
+                    if (countErr) {
+                      db.run('ROLLBACK');
+                      reject(countErr);
+                      return;
+                    }
+                    
+                    const nextTaskIndex = plan.current_task_index + 1;
+                    const totalTasks = countResult.total_tasks;
+                    const isLastTask = nextTaskIndex >= totalTasks;
+                    
+                    // If this was the last task, mark plan as completed for this user
+                    // Otherwise, move to next task
+                    const newTaskIndex = isLastTask ? totalTasks : nextTaskIndex;
+                    
+                    // Update plan completion status for this user
+                    const completedAt = isLastTask ? new Date().toISOString() : null;
+                    db.run(`
+                      INSERT OR REPLACE INTO plan_completion_status 
+                      (plan_id, user_id, completed, completed_at, updated_at) 
+                      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    `, [planId, userId, isLastTask ? 1 : 0, completedAt], (completionErr) => {
+                      if (completionErr) {
+                        db.run('ROLLBACK');
+                        reject(completionErr);
+                        return;
+                      }
+                      
+                      // Update plan's current_task_index
+                      db.run(`
+                        UPDATE plans 
+                        SET current_task_index = ?, updated_at = CURRENT_TIMESTAMP 
+                        WHERE id = ?
+                      `, [newTaskIndex, planId], (planUpdateErr) => {
+                        if (planUpdateErr) {
+                          db.run('ROLLBACK');
+                          reject(planUpdateErr);
+                          return;
+                        }
+                        
+                        db.run('COMMIT', (commitErr) => {
+                          if (commitErr) {
+                            reject(commitErr);
+                          } else {
+                            // Re-fetch the plan with updated individual task statuses
+                            Plan.findByUserId(userId).then(plans => {
+                              const updatedPlan = plans.find(p => p.id == planId);
+                              resolve(updatedPlan);
+                            }).catch(reject);
+                          }
+                        });
+                      });
+                    });
+                  });
+                })
+                .catch(setStatusErr => {
                   db.run('ROLLBACK');
-                  reject(countErr);
+                  reject(setStatusErr);
+                });
+            });
+          } else {
+            // Standard completion logic for owner/write permissions
+            // Get the current task
+            db.get(`
+              SELECT * FROM tasks 
+              WHERE plan_id = ? AND plan_order = ?
+            `, [planId, plan.current_task_index], (taskErr, task) => {
+              if (taskErr) {
+                db.run('ROLLBACK');
+                reject(taskErr);
+                return;
+              }
+              
+              if (!task) {
+                db.run('ROLLBACK');
+                reject(new Error('Current task not found'));
+                return;
+              }
+              
+              // Mark current task as completed
+              db.run(`
+                UPDATE tasks 
+                SET completed = 1, updated_at = CURRENT_TIMESTAMP 
+                WHERE id = ?
+              `, [task.id], (updateErr) => {
+                if (updateErr) {
+                  db.run('ROLLBACK');
+                  reject(updateErr);
                   return;
                 }
                 
-                const nextTaskIndex = plan.current_task_index + 1;
-                const totalTasks = countResult.total_tasks;
-                const isLastTask = nextTaskIndex >= totalTasks;
-                
-                // If this was the last task, mark plan as completed
-                // Otherwise, move to next task
-                const newTaskIndex = isLastTask ? totalTasks : nextTaskIndex;
-                const planCompleted = isLastTask ? 1 : 0;
-                
-                // Update plan
-                db.run(`
-                  UPDATE plans 
-                  SET current_task_index = ?, completed = ?, updated_at = CURRENT_TIMESTAMP 
-                  WHERE id = ?
-                `, [newTaskIndex, planCompleted, planId], (planUpdateErr) => {
-                  if (planUpdateErr) {
+                // Check if there are more tasks
+                db.get(`
+                  SELECT COUNT(*) as total_tasks FROM tasks 
+                  WHERE plan_id = ?
+                `, [planId], (countErr, countResult) => {
+                  if (countErr) {
                     db.run('ROLLBACK');
-                    reject(planUpdateErr);
+                    reject(countErr);
                     return;
                   }
                   
-                  db.run('COMMIT', (commitErr) => {
-                    if (commitErr) {
-                      reject(commitErr);
-                    } else {
-                      Plan.findById(planId).then(resolve).catch(reject);
+                  const nextTaskIndex = plan.current_task_index + 1;
+                  const totalTasks = countResult.total_tasks;
+                  const isLastTask = nextTaskIndex >= totalTasks;
+                  
+                  // If this was the last task, mark plan as completed
+                  // Otherwise, move to next task
+                  const newTaskIndex = isLastTask ? totalTasks : nextTaskIndex;
+                  const planCompleted = isLastTask ? 1 : 0;
+                  
+                  // Update plan completion status for the owner
+                  const completedAt = isLastTask ? new Date().toISOString() : null;
+                  db.run(`
+                    INSERT OR REPLACE INTO plan_completion_status 
+                    (plan_id, user_id, completed, completed_at, updated_at) 
+                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                  `, [planId, plan.user_id, planCompleted, completedAt], (completionErr) => {
+                    if (completionErr) {
+                      db.run('ROLLBACK');
+                      reject(completionErr);
+                      return;
                     }
+                    
+                    // Update plan
+                    db.run(`
+                      UPDATE plans 
+                      SET current_task_index = ?, completed = ?, updated_at = CURRENT_TIMESTAMP 
+                      WHERE id = ?
+                    `, [newTaskIndex, planCompleted, planId], (planUpdateErr) => {
+                      if (planUpdateErr) {
+                        db.run('ROLLBACK');
+                        reject(planUpdateErr);
+                        return;
+                      }
+                      
+                      db.run('COMMIT', (commitErr) => {
+                        if (commitErr) {
+                          reject(commitErr);
+                        } else {
+                          Plan.findById(planId).then(resolve).catch(reject);
+                        }
+                      });
+                    });
                   });
                 });
               });
             });
-          });
+          }
         });
       });
     });
@@ -944,6 +1151,165 @@ class Plan {
       } catch (error) {
         reject(error);
       }
+    });
+  }
+
+  // Set individual task completion status for a user
+  static async setIndividualTaskStatus(taskId, userId, completed) {
+    return new Promise((resolve, reject) => {
+      const db = database.getDB();
+      
+      const completedAt = completed ? new Date().toISOString() : null;
+      
+      db.run(`
+        INSERT OR REPLACE INTO individual_task_status 
+        (task_id, user_id, completed, completed_at, updated_at) 
+        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+      `, [taskId, userId, completed ? 1 : 0, completedAt], function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({
+            id: this.lastID,
+            task_id: taskId,
+            user_id: userId,
+            completed: completed,
+            completed_at: completedAt
+          });
+        }
+      });
+    });
+  }
+
+  // Get individual task status for a user
+  static async getIndividualTaskStatus(taskId, userId) {
+    return new Promise((resolve, reject) => {
+      const db = database.getDB();
+      
+      db.get(`
+        SELECT * FROM individual_task_status 
+        WHERE task_id = ? AND user_id = ?
+      `, [taskId, userId], (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(row ? {
+            ...row,
+            completed: Boolean(row.completed)
+          } : null);
+        }
+      });
+    });
+  }
+
+  // Get all individual task statuses for a user in a plan
+  static async getIndividualTaskStatusesForPlan(planId, userId) {
+    return new Promise((resolve, reject) => {
+      const db = database.getDB();
+      
+      db.all(`
+        SELECT its.* FROM individual_task_status its
+        JOIN tasks t ON its.task_id = t.id
+        WHERE t.plan_id = ? AND its.user_id = ?
+      `, [planId, userId], (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows.map(row => ({
+            ...row,
+            completed: Boolean(row.completed)
+          })));
+        }
+      });
+    });
+  }
+
+  // Check if a plan is completed for a specific user based on permission type
+  static async isPlanCompletedForUser(planId, userId) {
+    return new Promise((resolve, reject) => {
+      const db = database.getDB();
+      
+      // Get plan and user permission
+      db.get(`
+        SELECT p.*, sp.permissions as shared_permissions
+        FROM plans p
+        LEFT JOIN shared_plans sp ON p.id = sp.plan_id AND sp.shared_with_user_id = ?
+        WHERE p.id = ? AND (p.user_id = ? OR sp.shared_with_user_id = ?)
+      `, [userId, planId, userId, userId], (err, plan) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        if (!plan) {
+          resolve(false);
+          return;
+        }
+        
+        // For individual permission, check if all tasks are completed by this user
+        if (plan.shared_permissions === 'individual') {
+          // Get all tasks for this plan
+          db.all(`
+            SELECT t.id FROM tasks t WHERE t.plan_id = ?
+          `, [planId], (taskErr, tasks) => {
+            if (taskErr) {
+              reject(taskErr);
+              return;
+            }
+            
+            if (tasks.length === 0) {
+              resolve(true);
+              return;
+            }
+            
+            // Get individual task statuses for this user
+            const taskIds = tasks.map(task => task.id);
+            const placeholders = taskIds.map(() => '?').join(',');
+            
+            db.all(`
+              SELECT task_id, completed FROM individual_task_status
+              WHERE task_id IN (${placeholders}) AND user_id = ?
+            `, [...taskIds, userId], (statusErr, statuses) => {
+              if (statusErr) {
+                reject(statusErr);
+                return;
+              }
+              
+              // Check if all tasks are completed by this user
+              const statusMap = {};
+              statuses.forEach(status => {
+                statusMap[status.task_id] = status.completed;
+              });
+              
+              // Check if all tasks are completed
+              const allCompleted = tasks.every(task => 
+                statusMap.hasOwnProperty(task.id) && statusMap[task.id]
+              );
+              
+              resolve(allCompleted);
+            });
+          });
+        } else {
+          // For owner/write permissions, check plan completion status
+          db.get(`
+            SELECT completed FROM plan_completion_status
+            WHERE plan_id = ? AND user_id = ?
+          `, [planId, userId], (completionErr, completionRow) => {
+            if (completionErr) {
+              reject(completionErr);
+              return;
+            }
+            
+            // If we have a specific completion status for this user, use it
+            if (completionRow) {
+              resolve(Boolean(completionRow.completed));
+            } else {
+              // Otherwise, fallback to original plan completion status
+              resolve(Boolean(plan.completed));
+            }
+          });
+        }
+      });
     });
   }
 

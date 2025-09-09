@@ -159,6 +159,25 @@ export function usePlans() {
     }
   }
 
+  // Set individual task completion status
+  const setIndividualTaskStatus = async (planId, taskId, completed) => {
+    if (!user) return
+    
+    try {
+      const result = await apiService.setIndividualTaskStatus(planId, taskId, completed)
+      setPlans(prev => 
+        prev.map(plan => 
+          plan.id === planId ? result.plan : plan
+        )
+      )
+      return result
+    } catch (error) {
+      console.error('Failed to set individual task status:', error)
+      alert('Failed to update task status. Please try again.')
+      throw error
+    }
+  }
+
   // Share a plan with another user
   const sharePlan = async (planId, email, permissions = 'read') => {
     if (!user) return
@@ -214,6 +233,7 @@ export function usePlans() {
     addTaskToPlan,
     updatePlanTask,
     deletePlanTask,
+    setIndividualTaskStatus,
     sharePlan,
     unsharePlan,
     getSharedUsers

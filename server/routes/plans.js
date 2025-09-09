@@ -92,6 +92,62 @@ router.patch('/:id/complete-task', async (req, res) => {
   }
 });
 
+// Set individual task completion status
+router.patch('/:id/tasks/:taskId/individual-complete', async (req, res) => {
+  try {
+    const { completed } = req.body;
+    
+    // Verify the user has individual permission for this plan
+    const db = require('../database').getDB();
+    db.get(`
+      SELECT sp.permissions
+      FROM shared_plans sp
+      JOIN plans p ON sp.plan_id = p.id
+      WHERE sp.plan_id = ? AND sp.shared_with_user_id = ? AND p.user_id != ?
+    `, [req.params.id, req.user.id, req.user.id], async (err, sharedPlan) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+      
+      if (!sharedPlan || sharedPlan.permissions !== 'individual') {
+        return res.status(403).json({ error: 'Insufficient permissions' });
+      }
+      
+      // Verify that the task belongs to the plan
+      db.get(`
+        SELECT id FROM tasks 
+        WHERE id = ? AND plan_id = ?
+      `, [req.params.taskId, req.params.id], async (taskErr, task) => {
+        if (taskErr) {
+          console.error('Database error:', taskErr);
+          return res.status(500).json({ error: 'Internal server error' });
+        }
+        
+        if (!task) {
+          return res.status(404).json({ error: 'Task not found in this plan' });
+        }
+        
+        // Set individual task status
+        const result = await Plan.setIndividualTaskStatus(req.params.taskId, req.user.id, completed);
+        
+        // Re-fetch the plan with updated individual task statuses
+        const plans = await Plan.findByUserId(req.user.id);
+        const updatedPlan = plans.find(p => p.id == req.params.id);
+        
+        res.json({
+          message: `Task ${completed ? 'completed' : 'uncompleted'} successfully`,
+          taskStatus: result,
+          plan: updatedPlan
+        });
+      });
+    });
+  } catch (error) {
+    console.error('Set individual task status error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Delete a plan
 router.delete('/:id', async (req, res) => {
   try {

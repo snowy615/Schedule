@@ -176,6 +176,15 @@ class ApiService {
     return data.plan;
   }
 
+  // Set individual task completion status
+  async setIndividualTaskStatus(planId, taskId, completed) {
+    const data = await this.apiCall(`/plans/${planId}/tasks/${taskId}/individual-complete`, {
+      method: 'PATCH',
+      body: JSON.stringify({ completed }),
+    });
+    return data;
+  }
+
   async deletePlan(id) {
     return this.apiCall(`/plans/${id}`, {
       method: 'DELETE',

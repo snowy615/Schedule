@@ -117,23 +117,67 @@ class Database {
                 return;
               }
               
-              // Migrate existing data from 'time' column to 'start_time'
-              this.migrateTimeColumn().then(() => {
-                // Add priority column to existing tables if needed
-                return this.addPriorityColumn();
-              }).then(() => {
-                // Add repetition columns to existing tables if needed
-                return this.addRepetitionColumns();
-              }).then(() => {
-                // Add plan columns to existing tables if needed
-                return this.addPlanColumns();
-              }).then(() => {
-                // Add attachments column to existing tables if needed
-                return this.addAttachmentsColumn();
-              }).then(() => {
-                console.log('Database tables created successfully');
-                resolve();
-              }).catch(reject);
+              // Create individual_task_status table for tracking individual completion status
+              this.db.run(`
+                CREATE TABLE IF NOT EXISTS individual_task_status (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  task_id INTEGER NOT NULL,
+                  user_id INTEGER NOT NULL,
+                  completed BOOLEAN DEFAULT 0,
+                  completed_at DATETIME,
+                  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                  FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE,
+                  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                  UNIQUE(task_id, user_id)
+                )
+              `, (err) => {
+                if (err) {
+                  console.error('Error creating individual_task_status table:', err);
+                  reject(err);
+                  return;
+                }
+                
+                // Create plan_completion_status table for tracking plan completion by user
+                this.db.run(`
+                  CREATE TABLE IF NOT EXISTS plan_completion_status (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    plan_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    completed BOOLEAN DEFAULT 0,
+                    completed_at DATETIME,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (plan_id) REFERENCES plans (id) ON DELETE CASCADE,
+                    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                    UNIQUE(plan_id, user_id)
+                  )
+                `, (err) => {
+                  if (err) {
+                    console.error('Error creating plan_completion_status table:', err);
+                    reject(err);
+                    return;
+                  }
+                  
+                  // Migrate existing data from 'time' column to 'start_time'
+                  this.migrateTimeColumn().then(() => {
+                    // Add priority column to existing tables if needed
+                    return this.addPriorityColumn();
+                  }).then(() => {
+                    // Add repetition columns to existing tables if needed
+                    return this.addRepetitionColumns();
+                  }).then(() => {
+                    // Add plan columns to existing tables if needed
+                    return this.addPlanColumns();
+                  }).then(() => {
+                    // Add attachments column to existing tables if needed
+                    return this.addAttachmentsColumn();
+                  }).then(() => {
+                    console.log('Database tables created successfully');
+                    resolve();
+                  }).catch(reject);
+                });
+              });
             });
           });
         });
