@@ -33,7 +33,17 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
   useEffect(() => {
     if (plan.tasks) {
       setTasks(plan.tasks)
-      setCurrentTaskIndex(plan.current_task_index || 0)
+      // For individual permissions, determine current task based on incomplete tasks
+      if (plan.is_shared && plan.shared_permissions === 'individual') {
+        // Find the first incomplete task
+        const firstIncompleteIndex = plan.tasks.findIndex(task => !task.completed);
+        // If all tasks are completed, use the last task index
+        const currentIndex = firstIncompleteIndex !== -1 ? firstIncompleteIndex : plan.tasks.length;
+        setCurrentTaskIndex(currentIndex);
+      } else {
+        // For owner/write permissions, use the plan's current_task_index
+        setCurrentTaskIndex(plan.current_task_index || 0);
+      }
     }
   }, [plan])
 
@@ -102,6 +112,22 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
         } else {
           // If all tasks are completed, set to tasks.length to indicate completion
           setCurrentTaskIndex(tasks.length);
+        }
+      } else if (completed) {
+        // If we completed a task that wasn't the current task, we might need to update the current task index
+        // This can happen if tasks are completed out of order
+        const firstIncompleteIndex = tasks.findIndex((t, index) => index > currentTaskIndex && !t.completed);
+        if (firstIncompleteIndex !== -1) {
+          setCurrentTaskIndex(firstIncompleteIndex);
+        } else {
+          // If all tasks after currentTaskIndex are completed, find the first incomplete task from the beginning
+          const firstIncompleteFromStart = tasks.findIndex(t => !t.completed);
+          if (firstIncompleteFromStart !== -1) {
+            setCurrentTaskIndex(firstIncompleteFromStart);
+          } else {
+            // If all tasks are completed, set to tasks.length to indicate completion
+            setCurrentTaskIndex(tasks.length);
+          }
         }
       }
       
@@ -185,7 +211,7 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
   const getTaskStatus = (task, index) => {
     if (hasIndividualPermission) {
       // For individual users, status is based on task completion
-      return task.completed ? 'completed' : 'pending';
+      return task.completed ? 'completed' : (index === currentTaskIndex ? 'current' : 'pending');
     } else {
       // For owner/write users, status is based on current task index
       if (index < currentTaskIndex) return 'completed';
