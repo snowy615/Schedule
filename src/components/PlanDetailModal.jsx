@@ -149,7 +149,9 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
           <div className="modal-date">
             <span>Date: {format(parseDateSafely(plan.date), 'EEEE, MMMM d, yyyy')}</span>
             {plan.is_shared && (
-              <span className="shared-badge">Shared with you</span>
+              <span className="shared-badge">
+                {plan.shared_permissions === 'write' ? 'Collaborator' : 'Viewer'}
+              </span>
             )}
             {!plan.is_shared && (
               <span className="ownership-indicator">Owner</span>

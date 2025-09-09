@@ -45,10 +45,14 @@ router.post('/', async (req, res) => {
 // Get a specific plan with its tasks
 router.get('/:id', async (req, res) => {
   try {
-    const plan = await Plan.findById(req.params.id);
+    // Use findByUserId to get the plan with shared information
+    const plans = await Plan.findByUserId(req.user.id);
+    const plan = plans.find(p => p.id == req.params.id);
+    
     if (!plan) {
       return res.status(404).json({ error: 'Plan not found' });
     }
+    
     res.json({ plan });
   } catch (error) {
     console.error('Get plan error:', error);

@@ -140,7 +140,7 @@ class Plan {
       try {
         // Get all plans for the user (owned + shared)
         db.all(`
-          SELECT p.*, sp.permissions as shared_permissions
+          SELECT p.*, sp.permissions as shared_permissions, sp.shared_with_user_id
           FROM plans p
           LEFT JOIN shared_plans sp ON p.id = sp.plan_id AND sp.shared_with_user_id = ?
           WHERE p.user_id = ? OR sp.shared_with_user_id = ?
@@ -187,7 +187,7 @@ class Plan {
               ...plan,
               completed: Boolean(plan.completed),
               tasks: tasksByPlanId[plan.id] || [],
-              is_shared: plan.user_id !== userId, // Mark if this is a shared plan
+              is_shared: plan.shared_with_user_id !== null && plan.shared_with_user_id == userId, // Mark if this is a shared plan for this user
               shared_permissions: plan.shared_permissions || null
             }));
             
@@ -207,7 +207,7 @@ class Plan {
       
       // Get plans for the specific date (owned + shared)
       db.all(`
-        SELECT p.*, sp.permissions as shared_permissions
+        SELECT p.*, sp.permissions as shared_permissions, sp.shared_with_user_id
         FROM plans p
         LEFT JOIN shared_plans sp ON p.id = sp.plan_id AND sp.shared_with_user_id = ?
         WHERE (p.user_id = ? OR sp.shared_with_user_id = ?) AND p.date = ?
@@ -254,7 +254,7 @@ class Plan {
             ...plan,
             completed: Boolean(plan.completed),
             tasks: tasksByPlanId[plan.id] || [],
-            is_shared: plan.user_id !== userId, // Mark if this is a shared plan
+            is_shared: plan.shared_with_user_id !== null && plan.shared_with_user_id == userId, // Mark if this is a shared plan for this user
             shared_permissions: plan.shared_permissions || null
           }));
           
