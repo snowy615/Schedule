@@ -144,7 +144,8 @@ function TodayHourSchedulePage() {
         startOffset: 0,
         endOffset: 0,
         isFirstHour: true,
-        isLastHour: true
+        isLastHour: true,
+        isSingleHour: true
       }
     }
     
@@ -154,7 +155,7 @@ function TodayHourSchedulePage() {
     const taskStartTime = startHour + startMin / 60
     const taskEndTime = endHour + endMin / 60
     
-    // Calculate position within this hour slot (80px per hour)
+    // Calculate position within this hour slot (80px per hour to match min-height)
     const hourStart = hour
     const hourEnd = hour + 1
     
@@ -162,17 +163,25 @@ function TodayHourSchedulePage() {
     const overlapStart = Math.max(taskStartTime, hourStart)
     const overlapEnd = Math.min(taskEndTime, hourEnd)
     
-    // Convert to pixels (80px per hour to match min-height)
+    // Convert to pixels (80px per hour)
     const startOffset = (overlapStart - hourStart) * 80
     const height = (overlapEnd - overlapStart) * 80
+    
+    // Determine if this is the first, last, or middle hour of the task
+    const isFirstHour = hour === startHour
+    const isLastHour = (hour === endHour && endMin > 0) || (hour === endHour - 1 && endMin === 0)
+    const isSingleHour = Math.floor(taskStartTime) === Math.floor(taskEndTime) && 
+                         (Math.floor(taskStartTime) === hour || Math.floor(taskEndTime) === hour)
     
     return {
       top: startOffset,
       height: Math.max(height, 20), // Minimum 20px height
       startOffset: startOffset,
       endOffset: 80 - (startOffset + height),
-      isFirstHour: hour === startHour,
-      isLastHour: hour === endHour || (endHour === hour + 1 && endMin === 0)
+      isFirstHour,
+      isLastHour,
+      isSingleHour,
+      isMiddleHour: !isFirstHour && !isLastHour
     }
   }
 
@@ -409,30 +418,23 @@ function TodayHourSchedulePage() {
                           backgroundColor: task.completed ? 
                             'rgba(34, 197, 94, 0.1)' : 
                             priorityStyles.backgroundColor,
-                          borderTopLeftRadius: positioning.isFirstHour ? '6px' : '2px',
-                          borderTopRightRadius: positioning.isFirstHour ? '6px' : '2px',
-                          borderBottomLeftRadius: positioning.isLastHour ? '6px' : '2px',
-                          borderBottomRightRadius: positioning.isLastHour ? '6px' : '2px',
-                          zIndex: 2
+                          borderTopLeftRadius: positioning.isFirstHour ? '8px' : '0px',
+                          borderTopRightRadius: positioning.isFirstHour ? '8px' : '0px',
+                          borderBottomLeftRadius: positioning.isLastHour ? '8px' : '0px',
+                          borderBottomRightRadius: positioning.isLastHour ? '8px' : '0px',
+                          zIndex: 2,
+                          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                          overflow: 'hidden'
                         }}
                       >
                         {positioning.isFirstHour && (
                           <>
                             <div className="task-header">
-                              <input
-                                type="checkbox"
-                                checked={task.completed}
-                                onChange={() => toggleTask(task.id)}
-                                className="task-checkbox"
-                              />
                               <div className="task-title-section">
                                 <h3 className={`task-title ${task.completed ? 'completed-text' : ''}`}>
                                   {getRepeatIcon(task.repeat_type)} {task.title}
                                 </h3>
                                 <div className="task-badges">
-                                  <span className="priority-badge" style={{ color: priorityStyles.color }}>
-                                    P{task.priority || 3}
-                                  </span>
                                   {task.repeat_type && task.repeat_type !== 'none' && (
                                     <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
                                       🔄
@@ -457,6 +459,7 @@ function TodayHourSchedulePage() {
                                     deleteTask(task.id)
                                   }}
                                   className="delete-button"
+                                  title="Delete task"
                                 >
                                   ×
                                 </button>
@@ -467,26 +470,10 @@ function TodayHourSchedulePage() {
                                 {task.description}
                               </p>
                             )}
-                            <div className="task-time-info">
-                              <Clock size={14} />
-                              <span>
-                                {task.start_time && task.finish_time
-                                  ? `${formatTime(task.start_time)} - ${formatTime(task.finish_time)}`
-                                  : task.start_time
-                                  ? `Start: ${formatTime(task.start_time)}`
-                                  : task.finish_time
-                                  ? `End: ${formatTime(task.finish_time)}`
-                                  : 'No time set'
-                                }
-                              </span>
-                            </div>
+                            {/* Time display removed as per user request */}
                           </>
                         )}
-                        {!positioning.isFirstHour && (
-                          <div className="task-continuation">
-                            <span className="continuation-text">{task.title} (continued)</span>
-                          </div>
-                        )}
+
                       </div>
                     )
                   })
