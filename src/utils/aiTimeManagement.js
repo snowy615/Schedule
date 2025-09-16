@@ -55,7 +55,8 @@ export async function suggestTimeBlocks(tasks, plans) {
         console.log('Adding task to suggestions:', task);
         tasksNeedingSuggestions.push({
           ...task,
-          type: 'task'
+          type: 'task',
+          is_overdue: isOverdue
         });
       }
     } catch (error) {
@@ -107,13 +108,13 @@ export async function suggestTimeBlocks(tasks, plans) {
             });
             
             if (hasNoTime) {
-              console.log('Adding plan task to suggestions:', task);
               tasksNeedingSuggestions.push({
                 ...task,
                 plan_id: plan.id,
                 plan_title: plan.title,
                 date: plan.date,
-                type: 'plan_task'
+                type: 'plan_task',
+                is_overdue: isPlanOverdue
               });
             }
           } catch (error) {
@@ -246,10 +247,87 @@ function assignTimeBlocks(tasks, availableSlots) {
     
     // Assign time blocks to tasks
     const tasksWithSuggestions = [];
+    
+    // Separate overdue tasks from today's tasks
+    const overdueTasks = tasks.filter(task => task.is_overdue);
+    const todaysTasks = tasks.filter(task => !task.is_overdue);
+    
+    // For today's tasks, we want to start assigning from current time
+    const now = new Date();
+    const currentTimeString = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    // Find the first available slot that starts after current time
     let slotIndex = 0;
     let currentTimeInSlot = sortedSlots.length > 0 ? sortedSlots[0].start_time : '08:00';
     
-    tasks.forEach(task => {
+    // If we have today's tasks, find a slot after current time
+    if (todaysTasks.length > 0) {
+      for (let i = 0; i < sortedSlots.length; i++) {
+        if (sortedSlots[i].start_time >= currentTimeString) {
+          slotIndex = i;
+          currentTimeInSlot = sortedSlots[i].start_time;
+          break;
+        }
+      }
+    }
+    
+    // Process today's tasks first (assign after current time)
+    todaysTasks.forEach(task => {
+      try {
+        // Find a suitable 45-minute slot
+        let assigned = false;
+        
+        while (slotIndex < sortedSlots.length && !assigned) {
+          const slot = sortedSlots[slotIndex];
+          
+          // Calculate end time for 45-minute block
+          const endTime = addMinutesToTime(currentTimeInSlot, 45);
+          
+          // Check if the 45-minute block fits in the current slot
+          if (endTime <= slot.finish_time) {
+            tasksWithSuggestions.push({
+              ...task,
+              suggested_start_time: currentTimeInSlot,
+              suggested_finish_time: endTime
+            });
+            
+            // Move current time to after this block
+            currentTimeInSlot = endTime;
+            assigned = true;
+          } else {
+            // Move to next slot
+            slotIndex++;
+            if (slotIndex < sortedSlots.length) {
+              currentTimeInSlot = sortedSlots[slotIndex].start_time;
+            }
+          }
+        }
+        
+        // If we couldn't find a slot, add task without suggestion
+        if (!assigned) {
+          tasksWithSuggestions.push({
+            ...task,
+            suggested_start_time: null,
+            suggested_finish_time: null
+          });
+        }
+      } catch (error) {
+        console.warn('Error assigning time block to task:', task, error);
+        // Add task without suggestion if there's an error
+        tasksWithSuggestions.push({
+          ...task,
+          suggested_start_time: null,
+          suggested_finish_time: null
+        });
+      }
+    });
+    
+    // Reset slot index for overdue tasks (assign from beginning of day)
+    slotIndex = 0;
+    currentTimeInSlot = sortedSlots.length > 0 ? sortedSlots[0].start_time : '08:00';
+    
+    // Process overdue tasks (assign from beginning of day)
+    overdueTasks.forEach(task => {
       try {
         // Find a suitable 45-minute slot
         let assigned = false;

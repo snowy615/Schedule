@@ -17,6 +17,7 @@ import './HomePage.css'
 function HomePage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(new Date())
+  const [currentTime, setCurrentTime] = useState(new Date()) // Add state for current time
   const [showTaskModal, setShowTaskModal] = useState(false)
   const [showPlanModal, setShowPlanModal] = useState(false)
   const [draggedTask, setDraggedTask] = useState(null)
@@ -430,6 +431,15 @@ function HomePage() {
     }
   };
 
+  // Add effect to update the clock every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <div className="home-page">
       <div className="calendar-header">
@@ -443,6 +453,10 @@ function HomePage() {
           </button>
         </div>
         <div className="header-buttons">
+          {/* Add the clock display */}
+          <div className="clock-display">
+            {format(currentTime, 'h:mm:ss a')}
+          </div>
           <input 
             type="file" 
             accept=".ics" 
