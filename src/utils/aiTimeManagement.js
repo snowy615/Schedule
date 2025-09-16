@@ -194,9 +194,9 @@ function findAvailableTimeSlots(tasks, plans, date) {
     // Sort scheduled items by start time
     scheduledItems.sort((a, b) => a.start_time.localeCompare(b.start_time));
     
-    // Define reasonable working hours (8 AM to 8 PM)
+    // Define reasonable working hours (8 AM to 10 PM)
     const workStart = '08:00';
-    const workEnd = '20:00';
+    const workEnd = '22:00';
     
     // Find available slots
     const availableSlots = [];
@@ -255,13 +255,27 @@ function assignTimeBlocks(tasks, availableSlots) {
     const now = new Date();
     const currentTimeString = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     
+    // Define the end time limit (10 PM)
+    const endTimeLimit = '22:00';
+    
+    // If current time is already past the end time limit, no suggestions can be made
+    if (currentTimeString >= endTimeLimit) {
+      console.log('Current time is past 10 PM, no time slots available for suggestions');
+      return tasks.map(task => ({
+        ...task,
+        suggested_start_time: null,
+        suggested_finish_time: null
+      }));
+    }
+    
     // Find the first available slot that starts after current time
     let slotIndex = 0;
     let currentTimeInSlot = sortedSlots.length > 0 ? sortedSlots[0].start_time : '08:00';
     
     // Find a slot after current time for all tasks (both overdue and today's)
     for (let i = 0; i < sortedSlots.length; i++) {
-      if (sortedSlots[i].start_time >= currentTimeString) {
+      // Only consider slots that start after current time and end before 10 PM
+      if (sortedSlots[i].start_time >= currentTimeString && sortedSlots[i].start_time < endTimeLimit) {
         slotIndex = i;
         currentTimeInSlot = sortedSlots[i].start_time;
         break;
@@ -282,8 +296,8 @@ function assignTimeBlocks(tasks, availableSlots) {
           // Calculate end time for 45-minute block
           const endTime = addMinutesToTime(tempCurrentTimeInSlot, 45);
           
-          // Check if the 45-minute block fits in the current slot
-          if (endTime <= slot.finish_time) {
+          // Check if the 45-minute block fits in the current slot AND doesn't go beyond 10 PM
+          if (endTime <= slot.finish_time && endTime <= endTimeLimit && tempCurrentTimeInSlot >= currentTimeString) {
             tasksWithSuggestions.push({
               ...task,
               suggested_start_time: tempCurrentTimeInSlot,
