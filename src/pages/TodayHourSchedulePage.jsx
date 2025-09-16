@@ -41,7 +41,7 @@ function TodayHourSchedulePage() {
     try {
       await addTask({
         ...taskData,
-        date: getTomorrowDateString() // Add 24 hours to today's date
+        date: getTodayDateString() // Use today's date instead of tomorrow's
       })
       setShowTaskModal(false)
     } catch (error) {
@@ -65,7 +65,7 @@ function TodayHourSchedulePage() {
         // This is an add operation
         await addTask({
           ...taskIdOrData,
-          date: getTomorrowDateString()
+          date: getTodayDateString() // Use today's date instead of tomorrow's
         })
       }
       setShowTaskModal(false)

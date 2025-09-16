@@ -36,8 +36,6 @@ export function useTasks() {
     try {
       const task = await apiService.createTask(newTask)
       setTasks(prev => [...prev, task])
-      // Auto-refresh after adding a task
-      window.location.reload()
       return task
     } catch (error) {
       console.error('Failed to add task:', error)
@@ -58,9 +56,6 @@ export function useTasks() {
         )
       )
       
-      // Auto-refresh after toggling a task
-      window.location.reload()
-      
       // If a recurring task was just completed, reload tasks to get any newly generated next occurrence
       if (updatedTask.completed && 
           updatedTask.repeat_type && 
@@ -70,8 +65,6 @@ export function useTasks() {
           try {
             const refreshedTasks = await apiService.getTasks()
             setTasks(refreshedTasks)
-            // Auto-refresh after generating next occurrence
-            window.location.reload()
           } catch (error) {
             console.error('Failed to refresh tasks after recurring task completion:', error)
           }
@@ -91,8 +84,6 @@ export function useTasks() {
     try {
       await apiService.deleteTask(taskId)
       setTasks(prev => prev.filter(task => task.id !== taskId))
-      // Auto-refresh after deleting a task
-      window.location.reload()
     } catch (error) {
       console.error('Failed to delete task:', error)
       throw error
@@ -100,26 +91,19 @@ export function useTasks() {
   }
 
   const updateTask = async (taskId, updates) => {
-    console.log('useTasks - Updating task:', taskId, updates);
-    if (!user) {
-      console.log('useTasks - No user, returning');
-      return;
-    }
+    if (!user) return
     
     try {
-      const updatedTask = await apiService.updateTask(taskId, updates);
-      console.log('useTasks - Task updated, updating state:', updatedTask);
+      const updatedTask = await apiService.updateTask(taskId, updates)
       setTasks(prev => 
         prev.map(task => 
           task.id === taskId ? updatedTask : task
         )
-      );
-      // Auto-refresh after updating a task
-      window.location.reload();
-      return updatedTask;
+      )
+      return updatedTask
     } catch (error) {
-      console.error('useTasks - Failed to update task:', error);
-      throw error;
+      console.error('Failed to update task:', error)
+      throw error
     }
   }
 
@@ -129,8 +113,6 @@ export function useTasks() {
     try {
       const newTask = await apiService.generateNextOccurrence(taskId)
       setTasks(prev => [...prev, newTask])
-      // Auto-refresh after generating next occurrence
-      window.location.reload()
       return newTask
     } catch (error) {
       console.error('Failed to generate next occurrence:', error)
