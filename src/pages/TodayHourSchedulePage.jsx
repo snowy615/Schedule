@@ -129,8 +129,26 @@ function TodayHourSchedulePage() {
       const taskStartTime = startHour + startMin / 60
       const taskEndTime = endHour + endMin / 60
       
-      // Task spans this hour if it starts before or during this hour and ends after it starts
-      return taskStartTime <= hour + 1 && taskEndTime > hour
+      // Calculate hour boundaries
+      const hourStart = hour
+      const hourEnd = hour + 1
+      
+      // A task spans this hour if:
+      // 1. It starts before this hour ends (taskStartTime < hourEnd)
+      // 2. It ends after this hour starts (taskEndTime > hourStart)
+      if (taskStartTime < hourEnd && taskEndTime > hourStart) {
+        // Special case for precise boundary handling:
+        // If a task ends exactly at an hour boundary (e.g., 8:00),
+        // it should NOT appear in the next hour (8:00-9:00)
+        // but should appear in the current hour (7:00-8:00)
+        if (taskEndTime === hourEnd && endMin === 0) {
+          // Only show in hours that are before the end time
+          return taskStartTime < hourEnd && taskEndTime > hourStart && hour < endHour
+        }
+        return true
+      }
+      
+      return false
     })
   }
 
@@ -140,7 +158,7 @@ function TodayHourSchedulePage() {
       // For tasks without proper time, show them at the top of the hour
       return {
         top: 0,
-        height: 60, // Default 1 hour height
+        height: 100, // Full height for tasks without proper time
         startOffset: 0,
         endOffset: 0,
         isFirstHour: true,
@@ -155,7 +173,7 @@ function TodayHourSchedulePage() {
     const taskStartTime = startHour + startMin / 60
     const taskEndTime = endHour + endMin / 60
     
-    // Calculate position within this hour slot (80px per hour to match min-height)
+    // Calculate position within this hour slot
     const hourStart = hour
     const hourEnd = hour + 1
     
@@ -163,21 +181,28 @@ function TodayHourSchedulePage() {
     const overlapStart = Math.max(taskStartTime, hourStart)
     const overlapEnd = Math.min(taskEndTime, hourEnd)
     
-    // Convert to pixels (80px per hour)
-    const startOffset = (overlapStart - hourStart) * 80
-    const height = (overlapEnd - overlapStart) * 80
+    // Convert to percentage of the hour (0-100%)
+    const startPercent = ((overlapStart - hourStart) / 1) * 100
+    const heightPercent = ((overlapEnd - overlapStart) / 1) * 100
     
     // Determine if this is the first, last, or middle hour of the task
     const isFirstHour = hour === startHour
     const isLastHour = (hour === endHour && endMin > 0) || (hour === endHour - 1 && endMin === 0)
+    
+    // Special case: if task ends exactly at hour boundary, this hour is the last hour
+    const endsAtBoundary = taskEndTime === hourEnd && endMin === 0
+    if (endsAtBoundary) {
+      isLastHour = true
+    }
+    
     const isSingleHour = Math.floor(taskStartTime) === Math.floor(taskEndTime) && 
                          (Math.floor(taskStartTime) === hour || Math.floor(taskEndTime) === hour)
     
     return {
-      top: startOffset,
-      height: Math.max(height, 20), // Minimum 20px height
-      startOffset: startOffset,
-      endOffset: 80 - (startOffset + height),
+      top: startPercent,
+      height: heightPercent,
+      startOffset: startPercent,
+      endOffset: 100 - (startPercent + heightPercent),
       isFirstHour,
       isLastHour,
       isSingleHour,
@@ -402,19 +427,20 @@ function TodayHourSchedulePage() {
                       
                       const taskDurationMinutes = getTaskDurationInMinutes()
                       const isShortDuration = taskDurationMinutes <= 30
+                      const isVeryShortDuration = taskDurationMinutes <= 5
                       
                       return (
                         <div 
                           key={`${task.id}-${slot.hour}`}
-                          className={`hour-task-card continuous-task ${task.completed ? 'completed' : 'pending'}${isShortDuration ? ' short-duration' : ''}`}
+                          className={`hour-task-card continuous-task ${task.completed ? 'completed' : 'pending'}${isShortDuration ? ' short-duration' : ''}${isVeryShortDuration ? ' very-short' : ''}`}
                           onMouseEnter={(e) => handleTaskMouseEnter(task, e)}
                           onMouseLeave={handleTaskMouseLeave}
                           style={{
                             position: 'absolute',
-                            top: `${positioning.top}px`,
+                            top: `${positioning.top}%`,
                             left: '0.5rem',
                             right: '0.5rem',
-                            height: `${positioning.height}px`,
+                            height: `${positioning.height}%`,
                             borderLeft: `4px solid ${priorityStyles.color}`,
                             backgroundColor: task.completed ? 
                               'rgba(34, 197, 94, 0.1)' : 
@@ -425,7 +451,9 @@ function TodayHourSchedulePage() {
                             borderBottomRightRadius: positioning.isLastHour ? '8px' : '0px',
                             zIndex: 2,
                             boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                            overflow: 'hidden'
+                            overflow: 'hidden',
+                            display: 'flex',
+                            flexDirection: 'column'
                           }}
                         >
                           {positioning.isFirstHour && (
@@ -466,7 +494,7 @@ function TodayHourSchedulePage() {
                                   </button>
                                 </div>
                               </div>
-                              {task.description && positioning.height > 60 && !isShortDuration && (
+                              {task.description && positioning.height > 10 && !isShortDuration && (
                                 <p className={`task-description ${task.completed ? 'completed-text' : ''}`}>
                                   {task.description}
                                 </p>

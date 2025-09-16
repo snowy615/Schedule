@@ -137,24 +137,34 @@
 .hour-task-card {
   background: #2a2a2a;
   border-radius: 8px;
-  padding: 1rem;
+  padding: 0.5rem 0.75rem; /* Reduced padding to accommodate more tasks */
   transition: all 0.2s;
   border: 1px solid #333;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  min-height: 0; /* Allow flexible height based on time duration */
 }
 
 /* Continuous task block styles */
 .hour-task-card.continuous-task {
-  padding: 0.75rem;
+  padding: 0.5rem 0.75rem;
   margin: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 0; /* Allow flexible height based on time duration */
 }
 
 /* Adjust padding for short duration tasks */
 .hour-task-card.continuous-task.short-duration {
-  padding: 0.5rem;
+  padding: 0.1rem 0.25rem;
+  min-height: 0;
+}
+
+/* Adjust styling for very short duration tasks (5 minutes or less) */
+.hour-task-card.continuous-task.short-duration.very-short {
+  padding: 0.05rem 0.15rem;
+  min-height: 0;
+  font-size: 0.7rem;
 }
 
 .task-header {
@@ -319,13 +329,25 @@
 
 /* Compact layout for short tasks */
 .hour-task-card.short-duration .task-header {
-  margin-bottom: 0.25rem;
-  gap: 0.5rem;
+  margin-bottom: 0.1rem;
+  gap: 0.25rem;
 }
 
 .hour-task-card.short-duration .task-title {
-  font-size: 0.85rem;
-  line-height: 1.2;
+  font-size: 0.8rem;
+  line-height: 1.1;
+  margin: 0;
+}
+
+/* Even more compact layout for very short tasks */
+.hour-task-card.short-duration.very-short .task-header {
+  margin-bottom: 0;
+  gap: 0.1rem;
+}
+
+.hour-task-card.short-duration.very-short .task-title {
+  font-size: 0.7rem;
+  line-height: 1.0;
   margin: 0;
 }
 
@@ -334,25 +356,51 @@
 }
 
 .hour-task-card.short-duration .priority-badge {
-  font-size: 0.7rem;
-  padding: 0.1rem 0.3rem;
+  font-size: 0.6rem;
+  padding: 0.1rem 0.2rem;
+}
+
+.hour-task-card.short-duration.very-short .task-badges {
+  gap: 0.1rem;
+}
+
+.hour-task-card.short-duration.very-short .priority-badge {
+  font-size: 0.5rem;
+  padding: 0.05rem 0.1rem;
 }
 
 .hour-task-card.short-duration .task-time-info {
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
+  font-size: 0.7rem;
+  margin-top: 0.1rem;
 }
 
 .hour-task-card.short-duration .task-checkbox {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
 }
 
 .hour-task-card.short-duration .delete-button,
 .hour-task-card.short-duration .edit-task-button {
   width: 20px;
   height: 20px;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+}
+
+.hour-task-card.short-duration.very-short .task-time-info {
+  font-size: 0.6rem;
+  margin-top: 0;
+}
+
+.hour-task-card.short-duration.very-short .task-checkbox {
+  width: 10px;
+  height: 10px;
+}
+
+.hour-task-card.short-duration.very-short .delete-button,
+.hour-task-card.short-duration.very-short .edit-task-button {
+  width: 16px;
+  height: 16px;
+  font-size: 0.7rem;
 }
 
 /* Task hover tooltip */
