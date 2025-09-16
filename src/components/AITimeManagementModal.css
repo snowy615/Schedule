@@ -150,6 +150,14 @@
   gap: 0.25rem;
 }
 
+/* Add styling for the new task identification element */
+.ai-time-task-identification {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #007bff;
+  margin-bottom: 0.25rem;
+}
+
 .ai-time-suggestion-details > div {
   display: flex;
   align-items: center;

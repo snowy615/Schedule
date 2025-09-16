@@ -210,6 +210,11 @@ function AITimeManagementModal({ onClose, onSave }) {
                       </div>
                       
                       <div className="ai-time-suggestion-details">
+                        {/* Add explicit task type and status information */}
+                        <div className="ai-time-task-identification">
+                          {task.is_overdue ? 'Overdue' : 'Today\'s'} {task.type === 'plan_task' ? 'Plan Task' : 'Task'}: {task.title}
+                        </div>
+                        
                         <div className="ai-time-suggestion-date">
                           <Calendar size={16} />
                           <span>{task.date}</span>
