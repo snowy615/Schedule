@@ -13,7 +13,14 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
   const [editingTaskId, setEditingTaskId] = useState(null)
   const [editingTask, setEditingTask] = useState(null)
   const [showAddTask, setShowAddTask] = useState(false)
-  const [newTask, setNewTask] = useState({ title: '', description: '', priority: 3, date: formatDateForAPI(new Date()) })
+  const [newTask, setNewTask] = useState({ 
+    title: '', 
+    description: '', 
+    priority: 3, 
+    date: formatDateForAPI(new Date()),
+    start_time: '',
+    finish_time: ''
+  })
   const [showShareModal, setShowShareModal] = useState(false)
   const { setIndividualTaskStatus } = usePlans()
 
@@ -21,6 +28,16 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
   const hasWritePermission = !plan.is_shared || (plan.shared_permissions === 'write');
   // Check if the user has individual permissions for this plan
   const hasIndividualPermission = plan.is_shared && plan.shared_permissions === 'individual';
+
+  // Add formatTime function to convert time from HH:MM to a more readable format
+  const formatTime = (time) => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
 
   const priorityOptions = [
     { value: 1, label: 'P1 - Urgent', color: '#dc2626' },
@@ -33,17 +50,7 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
   useEffect(() => {
     if (plan.tasks) {
       setTasks(plan.tasks)
-      // For individual permissions, determine current task based on incomplete tasks
-      if (plan.is_shared && plan.shared_permissions === 'individual') {
-        // Find the first incomplete task
-        const firstIncompleteIndex = plan.tasks.findIndex(task => !task.completed);
-        // If all tasks are completed, use the last task index
-        const currentIndex = firstIncompleteIndex !== -1 ? firstIncompleteIndex : plan.tasks.length;
-        setCurrentTaskIndex(currentIndex);
-      } else {
-        // For owner/write permissions, use the plan's current_task_index
-        setCurrentTaskIndex(plan.current_task_index || 0);
-      }
+      setCurrentTaskIndex(plan.current_task_index || 0)
     }
   }, [plan])
 
@@ -113,22 +120,6 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
           // If all tasks are completed, set to tasks.length to indicate completion
           setCurrentTaskIndex(tasks.length);
         }
-      } else if (completed) {
-        // If we completed a task that wasn't the current task, we might need to update the current task index
-        // This can happen if tasks are completed out of order
-        const firstIncompleteIndex = tasks.findIndex((t, index) => index > currentTaskIndex && !t.completed);
-        if (firstIncompleteIndex !== -1) {
-          setCurrentTaskIndex(firstIncompleteIndex);
-        } else {
-          // If all tasks after currentTaskIndex are completed, find the first incomplete task from the beginning
-          const firstIncompleteFromStart = tasks.findIndex(t => !t.completed);
-          if (firstIncompleteFromStart !== -1) {
-            setCurrentTaskIndex(firstIncompleteFromStart);
-          } else {
-            // If all tasks are completed, set to tasks.length to indicate completion
-            setCurrentTaskIndex(tasks.length);
-          }
-        }
       }
       
       // Call the callback to handle navigation
@@ -143,7 +134,11 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
 
   const handleEditTask = (task) => {
     setEditingTaskId(task.id)
-    setEditingTask({ ...task })
+    setEditingTask({ 
+      ...task,
+      start_time: task.start_time || '',
+      finish_time: task.finish_time || ''
+    })
   }
 
   const handleSaveTask = async () => {
@@ -154,7 +149,9 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
         title: editingTask.title.trim(),
         description: editingTask.description ? editingTask.description.trim() : null,
         priority: editingTask.priority,
-        date: editingTask.date
+        date: editingTask.date,
+        start_time: editingTask.start_time || null,
+        finish_time: editingTask.finish_time || null
       })
       setEditingTaskId(null)
       setEditingTask(null)
@@ -193,9 +190,18 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
         title: newTask.title.trim(),
         description: newTask.description ? newTask.description.trim() : null,
         priority: newTask.priority,
-        date: newTask.date
+        date: newTask.date,
+        start_time: newTask.start_time || null,
+        finish_time: newTask.finish_time || null
       })
-      setNewTask({ title: '', description: '', priority: 3, date: formatDateForAPI(new Date()) })
+      setNewTask({ 
+        title: '', 
+        description: '', 
+        priority: 3, 
+        date: formatDateForAPI(new Date()),
+        start_time: '',
+        finish_time: ''
+      })
       setShowAddTask(false)
     } catch (error) {
       console.error('Failed to add task:', error)
@@ -211,7 +217,7 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
   const getTaskStatus = (task, index) => {
     if (hasIndividualPermission) {
       // For individual users, status is based on task completion
-      return task.completed ? 'completed' : (index === currentTaskIndex ? 'current' : 'pending');
+      return task.completed ? 'completed' : 'pending';
     } else {
       // For owner/write users, status is based on current task index
       if (index < currentTaskIndex) return 'completed';
@@ -381,6 +387,23 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
                       className="task-date-input"
                     />
                   </div>
+                  {/* Add time inputs for new tasks */}
+                  <div className="form-row">
+                    <label>Start Time:</label>
+                    <input
+                      type="time"
+                      value={newTask.start_time || ''}
+                      onChange={(e) => setNewTask(prev => ({ ...prev, start_time: e.target.value }))}
+                      className="task-time-input"
+                    />
+                    <label>Finish Time:</label>
+                    <input
+                      type="time"
+                      value={newTask.finish_time || ''}
+                      onChange={(e) => setNewTask(prev => ({ ...prev, finish_time: e.target.value }))}
+                      className="task-time-input"
+                    />
+                  </div>
                   <div className="form-actions">
                     <button onClick={() => setShowAddTask(false)} className="cancel-button">
                       Cancel
@@ -525,6 +548,12 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
                               <div className="task-date-info">
                                 <Calendar size={14} />
                                 <span>Due: {format(parseDateSafely(task.date), 'MMM d, yyyy')}</span>
+                              </div>
+                            )}
+                            {/* Display task time if available */}
+                            {task.start_time && task.finish_time && (
+                              <div className="task-time-info">
+                                <span>Time: {formatTime(task.start_time)} - {formatTime(task.finish_time)}</span>
                               </div>
                             )}
                             {status === 'current' && (
