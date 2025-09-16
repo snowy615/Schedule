@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Brain, X, Clock, Calendar, CheckCircle } from 'lucide-react'
+import { Brain, X, Clock, Calendar, CheckCircle, AlertTriangle } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import { usePlans } from '../hooks/usePlans'
 import { suggestTimeBlocks } from '../utils/aiTimeManagement'
@@ -53,11 +53,13 @@ function AITimeManagementModal({ onClose, onSave }) {
               // Update regular task
               console.log('Calling updateTask with:', task.id, {
                 start_time: task.suggested_start_time,
-                finish_time: task.suggested_finish_time
+                finish_time: task.suggested_finish_time,
+                date: task.date // Also update the date if it was moved to today
               });
               await updateTask(task.id, {
                 start_time: task.suggested_start_time,
-                finish_time: task.suggested_finish_time
+                finish_time: task.suggested_finish_time,
+                date: task.date // Update date if it was moved to today
               });
               successCount++;
               console.log(`Successfully updated task ${task.id}`);
@@ -126,11 +128,13 @@ function AITimeManagementModal({ onClose, onSave }) {
           // Update regular task
           console.log('Calling updateTask with:', task.id, {
             start_time: task.suggested_start_time,
-            finish_time: task.suggested_finish_time
+            finish_time: task.suggested_finish_time,
+            date: task.date // Also update the date if it was moved to today
           });
           await updateTask(task.id, {
             start_time: task.suggested_start_time,
-            finish_time: task.suggested_finish_time
+            finish_time: task.suggested_finish_time,
+            date: task.date // Update date if it was moved to today
           });
           alert('Time suggestion applied successfully!');
         } else if (task.type === 'plan_task' && task.plan_id) {
@@ -167,6 +171,10 @@ function AITimeManagementModal({ onClose, onSave }) {
     return `${displayHour}:${minutes} ${ampm}`
   }
 
+  // Separate different types of tasks for better organization
+  const overdueTasks = suggestions.filter(task => task.is_overdue);
+  const todayTasks = suggestions.filter(task => !task.is_overdue);
+
   return (
     <div className="ai-time-modal-overlay">
       <div className="ai-time-modal">
@@ -198,56 +206,128 @@ function AITimeManagementModal({ onClose, onSave }) {
                 <p>AI has found {suggestions.length} activities that could use time suggestions:</p>
               </div>
               
-              <div className="ai-time-suggestions-list">
-                {suggestions.map((task, index) => (
-                  <div key={`${task.type}-${task.id}`} className="ai-time-suggestion-item">
-                    <div className="ai-time-suggestion-info">
-                      <div className="ai-time-suggestion-title">
-                        <h4>{task.title}</h4>
-                        {task.type === 'plan_task' && (
-                          <span className="ai-time-plan-tag">Plan: {task.plan_title}</span>
-                        )}
-                      </div>
-                      
-                      <div className="ai-time-suggestion-details">
-                        {/* Add explicit task type and status information */}
-                        <div className="ai-time-task-identification">
-                          {task.is_overdue ? 'Overdue' : 'Today\'s'} {task.type === 'plan_task' ? 'Plan Task' : 'Task'}: {task.title}
-                        </div>
-                        
-                        <div className="ai-time-suggestion-date">
-                          <Calendar size={16} />
-                          <span>{task.date}</span>
-                        </div>
-                        
-                        {task.suggested_start_time && task.suggested_finish_time ? (
-                          <div className="ai-time-suggestion-time">
-                            <Clock size={16} />
-                            <span>
-                              {formatTime(task.suggested_start_time)} - {formatTime(task.suggested_finish_time)}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="ai-time-suggestion-no-time">
-                            <span>No suitable time slot available</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {task.suggested_start_time && task.suggested_finish_time && (
-                      <div className="ai-time-suggestion-actions">
-                        <button 
-                          className="ai-time-apply-button"
-                          onClick={() => handleApplySingle(task)}
-                        >
-                          Apply
-                        </button>
-                      </div>
-                    )}
+              {/* Overdue Tasks Section */}
+              {overdueTasks.length > 0 && (
+                <div className="ai-time-section">
+                  <div className="ai-time-section-header">
+                    <AlertTriangle size={20} />
+                    <h3>Overdue Tasks ({overdueTasks.length})</h3>
                   </div>
-                ))}
-              </div>
+                  <div className="ai-time-suggestions-list">
+                    {overdueTasks.map((task, index) => (
+                      <div key={`${task.type}-${task.id}`} className="ai-time-suggestion-item overdue-task">
+                        <div className="ai-time-suggestion-info">
+                          <div className="ai-time-suggestion-title">
+                            <h4>{task.title}</h4>
+                            {task.type === 'plan_task' && (
+                              <span className="ai-time-plan-tag">Plan: {task.plan_title}</span>
+                            )}
+                          </div>
+                          
+                          <div className="ai-time-suggestion-details">
+                            {/* Add explicit task type and status information */}
+                            <div className="ai-time-task-identification">
+                              Overdue {task.type === 'plan_task' ? 'Plan Task' : 'Task'}: {task.title}
+                            </div>
+                            
+                            <div className="ai-time-suggestion-date">
+                              <Calendar size={16} />
+                              <span>
+                                {task.originalDate ? `Originally due: ${task.originalDate}` : `Due: ${task.date}`}
+                                {task.date !== (task.originalDate || task.date) ? ' (Moved to today)' : ''}
+                              </span>
+                            </div>
+                            
+                            {task.suggested_start_time && task.suggested_finish_time ? (
+                              <div className="ai-time-suggestion-time">
+                                <Clock size={16} />
+                                <span>
+                                  {formatTime(task.suggested_start_time)} - {formatTime(task.suggested_finish_time)}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="ai-time-suggestion-no-time">
+                                <span>No suitable time slot available</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {task.suggested_start_time && task.suggested_finish_time && (
+                          <div className="ai-time-suggestion-actions">
+                            <button 
+                              className="ai-time-apply-button"
+                              onClick={() => handleApplySingle(task)}
+                            >
+                              Apply
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Today's Tasks Section */}
+              {todayTasks.length > 0 && (
+                <div className="ai-time-section">
+                  <div className="ai-time-section-header">
+                    <Clock size={20} />
+                    <h3>Today's Tasks ({todayTasks.length})</h3>
+                  </div>
+                  <div className="ai-time-suggestions-list">
+                    {todayTasks.map((task, index) => (
+                      <div key={`${task.type}-${task.id}`} className="ai-time-suggestion-item">
+                        <div className="ai-time-suggestion-info">
+                          <div className="ai-time-suggestion-title">
+                            <h4>{task.title}</h4>
+                            {task.type === 'plan_task' && (
+                              <span className="ai-time-plan-tag">Plan: {task.plan_title}</span>
+                            )}
+                          </div>
+                          
+                          <div className="ai-time-suggestion-details">
+                            {/* Add explicit task type and status information */}
+                            <div className="ai-time-task-identification">
+                              {task.type === 'plan_task' ? 'Plan Task' : 'Task'}: {task.title}
+                            </div>
+                            
+                            <div className="ai-time-suggestion-date">
+                              <Calendar size={16} />
+                              <span>{task.date}</span>
+                            </div>
+                            
+                            {task.suggested_start_time && task.suggested_finish_time ? (
+                              <div className="ai-time-suggestion-time">
+                                <Clock size={16} />
+                                <span>
+                                  {formatTime(task.suggested_start_time)} - {formatTime(task.suggested_finish_time)}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="ai-time-suggestion-no-time">
+                                <span>No suitable time slot available</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {task.suggested_start_time && task.suggested_finish_time && (
+                          <div className="ai-time-suggestion-actions">
+                            <button 
+                              className="ai-time-apply-button"
+                              onClick={() => handleApplySingle(task)}
+                            >
+                              Apply
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

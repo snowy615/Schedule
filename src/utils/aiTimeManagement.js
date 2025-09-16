@@ -1,5 +1,5 @@
 import { getTodayDateString, parseDateSafely } from './dateUtils';
-import { isToday, isBefore } from 'date-fns';
+import { isToday, isBefore, isAfter } from 'date-fns';
 
 /**
  * Suggests 45-minute time blocks for tasks without user-input times
@@ -16,7 +16,8 @@ export async function suggestTimeBlocks(tasks, plans) {
   // Filter tasks that need time suggestions:
   // 1. Overdue tasks (incomplete tasks from previous days) - assign to today
   // 2. Today's tasks without start/finish times
-  // 3. Plan tasks without start/finish times - assign to today for overdue plans
+  // 3. Tasks with times in the past that are incomplete - move to today
+  // 4. Plan tasks without start/finish times - assign to today for overdue plans
   
   const tasksNeedingSuggestions = [];
   
@@ -38,6 +39,9 @@ export async function suggestTimeBlocks(tasks, plans) {
       // Check if task is for today
       const isTaskForToday = isToday(taskDate);
       
+      // Check if task has times in the past and is incomplete
+      const hasPastTimes = !task.completed && task.start_time && task.finish_time && isTimeInPast(task.start_time);
+      
       // Check if task lacks time information
       const hasNoTime = !task.start_time || !task.finish_time;
       
@@ -47,18 +51,33 @@ export async function suggestTimeBlocks(tasks, plans) {
         date: task.date,
         isOverdue,
         isTaskForToday,
+        hasPastTimes,
         hasNoTime
       });
       
-      // Add to suggestions list if it's overdue or today's task without times
-      if ((isOverdue || isTaskForToday) && hasNoTime) {
+      // Add to suggestions list if it's overdue, has past times, or today's task without times
+      if ((isOverdue || hasPastTimes || isTaskForToday) && hasNoTime) {
         console.log('Adding task to suggestions:', task);
         tasksNeedingSuggestions.push({
           ...task,
-          // For overdue tasks, we'll assign times on today's date
-          date: isOverdue ? today : task.date,
+          // For overdue tasks or tasks with past times, we'll assign times on today's date
+          date: (isOverdue || hasPastTimes) ? today : task.date,
           type: 'task',
-          is_overdue: isOverdue
+          is_overdue: isOverdue || hasPastTimes
+        });
+      }
+      // Special case: task has times but they're in the past and task is incomplete
+      else if ((isOverdue || hasPastTimes) && !hasNoTime) {
+        console.log('Adding task with past times to suggestions:', task);
+        tasksNeedingSuggestions.push({
+          ...task,
+          // Move task to today's date
+          date: today,
+          type: 'task',
+          is_overdue: true,
+          // We'll suggest new times for this task
+          start_time: null,
+          finish_time: null
         });
       }
     } catch (error) {
@@ -103,21 +122,25 @@ export async function suggestTimeBlocks(tasks, plans) {
             // Check if task lacks time information
             const hasNoTime = !task.start_time || !task.finish_time;
             
+            // Check if task has times in the past
+            const hasPastTimes = task.start_time && isTimeInPast(task.start_time);
+            
             console.log('Plan task analysis:', {
               id: task.id,
               title: task.title,
-              hasNoTime
+              hasNoTime,
+              hasPastTimes
             });
             
-            if (hasNoTime) {
+            if (hasNoTime || hasPastTimes) {
               tasksNeedingSuggestions.push({
                 ...task,
                 plan_id: plan.id,
                 plan_title: plan.title,
-                // For overdue plans, we'll assign times on today's date
-                date: isPlanOverdue ? today : plan.date,
+                // For overdue plans or tasks with past times, we'll assign times on today's date
+                date: (isPlanOverdue || hasPastTimes) ? today : plan.date,
                 type: 'plan_task',
-                is_overdue: isPlanOverdue
+                is_overdue: isPlanOverdue || hasPastTimes
               });
             }
           } catch (error) {
@@ -141,6 +164,17 @@ export async function suggestTimeBlocks(tasks, plans) {
   console.log('Tasks with suggestions:', tasksWithSuggestions);
   
   return tasksWithSuggestions;
+}
+
+/**
+ * Checks if a time is in the past relative to current time
+ * @param {string} time - Time string in HH:MM format
+ * @returns {boolean} - True if time is in the past
+ */
+function isTimeInPast(time) {
+  const now = new Date();
+  const currentTimeString = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  return time < currentTimeString;
 }
 
 /**

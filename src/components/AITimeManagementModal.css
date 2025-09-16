@@ -104,6 +104,27 @@
   color: #333;
 }
 
+/* New section styling */
+.ai-time-section {
+  margin-bottom: 1.5rem;
+}
+
+.ai-time-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.ai-time-section-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
 .ai-time-suggestions-list {
   display: flex;
   flex-direction: column;
@@ -117,6 +138,12 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+}
+
+/* Special styling for overdue tasks */
+.ai-time-suggestion-item.overdue-task {
+  border-left: 4px solid #dc3545;
+  background-color: #fff5f5;
 }
 
 .ai-time-suggestion-info {
@@ -158,6 +185,11 @@
   margin-bottom: 0.25rem;
 }
 
+/* Special styling for overdue task identification */
+.ai-time-suggestion-item.overdue-task .ai-time-task-identification {
+  color: #dc3545;
+}
+
 .ai-time-suggestion-details > div {
   display: flex;
   align-items: center;
@@ -183,6 +215,15 @@
 
 .ai-time-apply-button:hover {
   background-color: #0056b3;
+}
+
+/* Special styling for overdue task apply button */
+.ai-time-suggestion-item.overdue-task .ai-time-apply-button {
+  background-color: #dc3545;
+}
+
+.ai-time-suggestion-item.overdue-task .ai-time-apply-button:hover {
+  background-color: #c82333;
 }
 
 .ai-time-modal-footer {
