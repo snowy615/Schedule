@@ -819,7 +819,8 @@ class Plan {
             const isCompletionUpdate = updates.hasOwnProperty('completed') && updates.completed !== task.completed;
             
             // Build dynamic update query
-            const allowedFields = ['title', 'description', 'priority', 'date', 'completed'];
+            // Added start_time and finish_time to allowed fields
+            const allowedFields = ['title', 'description', 'priority', 'date', 'completed', 'start_time', 'finish_time'];
             const fields = [];
             const values = [];
             

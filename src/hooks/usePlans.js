@@ -123,27 +123,32 @@ export function usePlans() {
   }
 
   const updatePlanTask = async (planId, taskId, updates) => {
-    if (!user) return
+    console.log('usePlans - Updating plan task:', planId, taskId, updates);
+    if (!user) {
+      console.log('usePlans - No user, returning');
+      return;
+    }
     
     try {
-      const updatedPlan = await apiService.updatePlanTask(planId, taskId, updates)
+      const updatedPlan = await apiService.updatePlanTask(planId, taskId, updates);
+      console.log('usePlans - Plan task updated, updating state:', updatedPlan);
       setPlans(prev => 
         prev.map(plan => 
           plan.id === planId ? updatedPlan : plan
         )
-      )
+      );
       // Auto-refresh after updating a plan task
-      window.location.reload()
-      return updatedPlan
+      window.location.reload();
+      return updatedPlan;
     } catch (error) {
-      console.error('Failed to update plan task:', error)
+      console.error('usePlans - Failed to update plan task:', error);
       // Check if it's a permission error
       if (error.message && error.message.includes('Insufficient permissions')) {
-        alert('You do not have permission to modify this plan.')
+        alert('You do not have permission to modify this plan.');
       } else {
-        alert('Failed to update task. Please try again.')
+        alert('Failed to update task. Please try again.');
       }
-      throw error
+      throw error;
     }
   }
 

@@ -113,11 +113,18 @@ class ApiService {
 
   // Update a task (this might affect plan completion status)
   async updateTask(id, updates) {
-    const data = await this.apiCall(`/tasks/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(updates),
-    });
-    return data.task;
+    console.log('API Service - Updating task:', id, updates);
+    try {
+      const data = await this.apiCall(`/tasks/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates),
+      });
+      console.log('API Service - Task updated successfully:', data.task);
+      return data.task;
+    } catch (error) {
+      console.error('API Service - Failed to update task:', error);
+      throw error;
+    }
   }
 
   async toggleTask(id) {
@@ -201,11 +208,18 @@ class ApiService {
 
   // Update a task in a plan
   async updatePlanTask(planId, taskId, updates) {
-    const data = await this.apiCall(`/plans/${planId}/tasks/${taskId}`, {
-      method: 'PUT',
-      body: JSON.stringify(updates),
-    });
-    return data.plan;
+    console.log('API Service - Updating plan task:', planId, taskId, updates);
+    try {
+      const data = await this.apiCall(`/plans/${planId}/tasks/${taskId}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates),
+      });
+      console.log('API Service - Plan task updated successfully:', data.plan);
+      return data.plan;
+    } catch (error) {
+      console.error('API Service - Failed to update plan task:', error);
+      throw error;
+    }
   }
 
   // Delete a task from a plan

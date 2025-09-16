@@ -100,21 +100,26 @@ export function useTasks() {
   }
 
   const updateTask = async (taskId, updates) => {
-    if (!user) return
+    console.log('useTasks - Updating task:', taskId, updates);
+    if (!user) {
+      console.log('useTasks - No user, returning');
+      return;
+    }
     
     try {
-      const updatedTask = await apiService.updateTask(taskId, updates)
+      const updatedTask = await apiService.updateTask(taskId, updates);
+      console.log('useTasks - Task updated, updating state:', updatedTask);
       setTasks(prev => 
         prev.map(task => 
           task.id === taskId ? updatedTask : task
         )
-      )
+      );
       // Auto-refresh after updating a task
-      window.location.reload()
-      return updatedTask
+      window.location.reload();
+      return updatedTask;
     } catch (error) {
-      console.error('Failed to update task:', error)
-      throw error
+      console.error('useTasks - Failed to update task:', error);
+      throw error;
     }
   }
 
