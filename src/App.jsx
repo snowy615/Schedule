@@ -48,3 +48,6 @@ function App() {
 }
 
 export default App
+
+// Test comment to verify git tracking
+// comment testing if change is reflected. None seen.

@@ -95,7 +95,7 @@ class Plan {
       const db = database.getDB();
       
       // Get the plan
-      db.get('SELECT * FROM plans WHERE id = ?', [id], (err, planRow) => {
+      db.get('SELECT * FROM plans WHERE id = ?', [id], async (err, planRow) => {
         if (err) {
           reject(err);
           return;
@@ -105,6 +105,9 @@ class Plan {
           resolve(null);
           return;
         }
+        
+        // Check if this plan has been shared with others
+        const hasShared = await Plan.hasSharedUsers(planRow.id, planRow.user_id);
         
         // Get the plan's tasks
         db.all(`
@@ -123,7 +126,8 @@ class Plan {
             tasks: taskRows.map(task => ({
               ...task,
               completed: Boolean(task.completed)
-            }))
+            })),
+            has_shared_with_others: hasShared
           };
           
           resolve(plan);
@@ -199,6 +203,16 @@ class Plan {
                 }
               }
               
+              // Check if each plan (owned by this user) has been shared with others
+              const sharedStatusMap = {};
+              for (const plan of planRows) {
+                // Only check for plans owned by this user
+                if (plan.user_id == userId) {
+                  const hasShared = await Plan.hasSharedUsers(plan.id, userId);
+                  sharedStatusMap[plan.id] = hasShared;
+                }
+              }
+              
               // Group tasks by plan_id
               const tasksByPlanId = {};
               taskRows.forEach(task => {
@@ -237,7 +251,8 @@ class Plan {
                   completed: isCompleted,
                   tasks: tasksByPlanId[plan.id] || [],
                   is_shared: plan.shared_with_user_id !== null && plan.shared_with_user_id == userId, // Mark if this is a shared plan for this user
-                  shared_permissions: plan.shared_permissions || null
+                  shared_permissions: plan.shared_permissions || null,
+                  has_shared_with_others: sharedStatusMap[plan.id] || false // Mark if the owner has shared this plan with others
                 };
               });
               
@@ -317,6 +332,16 @@ class Plan {
               }
             }
             
+            // Check if each plan (owned by this user) has been shared with others
+            const sharedStatusMap = {};
+            for (const plan of planRows) {
+              // Only check for plans owned by this user
+              if (plan.user_id == userId) {
+                const hasShared = await Plan.hasSharedUsers(plan.id, userId);
+                sharedStatusMap[plan.id] = hasShared;
+              }
+            }
+            
             // Group tasks by plan_id
             const tasksByPlanId = {};
             taskRows.forEach(task => {
@@ -355,7 +380,8 @@ class Plan {
                 completed: isCompleted,
                 tasks: tasksByPlanId[plan.id] || [],
                 is_shared: plan.shared_with_user_id !== null && plan.shared_with_user_id == userId, // Mark if this is a shared plan for this user
-                shared_permissions: plan.shared_permissions || null
+                shared_permissions: plan.shared_permissions || null,
+                has_shared_with_others: sharedStatusMap[plan.id] || false // Mark if the owner has shared this plan with others
               };
             });
             
@@ -1089,6 +1115,26 @@ class Plan {
             resolve(sharedUsers);
           }
         });
+      });
+    });
+  }
+
+  // Check if a plan has been shared with other users
+  static async hasSharedUsers(planId, ownerId) {
+    return new Promise((resolve, reject) => {
+      const db = database.getDB();
+      
+      // Check if there are any shared plans for this plan
+      db.get(`
+        SELECT COUNT(*) as shared_count
+        FROM shared_plans
+        WHERE plan_id = ? AND owner_id = ?
+      `, [planId, ownerId], (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result.shared_count > 0);
+        }
       });
     });
   }
