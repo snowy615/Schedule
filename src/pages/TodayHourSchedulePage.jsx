@@ -385,98 +385,117 @@ function TodayHourSchedulePage() {
                     <span>No tasks scheduled</span>
                   </div>
                 ) : (
-                  slot.tasks.map(task => {
-                    const priorityStyles = getPriorityStyles(task.priority || 3)
-                    const positioning = getTaskPositioning(task, slot.hour)
-                    
-                    // Calculate task duration in minutes to determine if it's a short task
-                    const getTaskDurationInMinutes = () => {
-                      if (!task.start_time || !task.finish_time) return 60 // Default 1 hour
-                      const [startHour, startMin] = task.start_time.split(':').map(Number)
-                      const [endHour, endMin] = task.finish_time.split(':').map(Number)
-                      const startTotal = startHour * 60 + startMin
-                      const endTotal = endHour * 60 + endMin
-                      return endTotal - startTotal
-                    }
-                    
-                    const taskDurationMinutes = getTaskDurationInMinutes()
-                    const isShortDuration = taskDurationMinutes <= 30
-                    
-                    return (
-                      <div 
-                        key={`${task.id}-${slot.hour}`}
-                        className={`hour-task-card continuous-task ${task.completed ? 'completed' : 'pending'}${isShortDuration ? ' short-duration' : ''}`}
-                        onMouseEnter={(e) => handleTaskMouseEnter(task, e)}
-                        onMouseLeave={handleTaskMouseLeave}
-                        style={{
-                          position: 'absolute',
-                          top: `${positioning.top}px`,
-                          left: '0.5rem',
-                          right: '0.5rem',
-                          height: `${positioning.height}px`,
-                          borderLeft: `4px solid ${priorityStyles.color}`,
-                          backgroundColor: task.completed ? 
-                            'rgba(34, 197, 94, 0.1)' : 
-                            priorityStyles.backgroundColor,
-                          borderTopLeftRadius: positioning.isFirstHour ? '8px' : '0px',
-                          borderTopRightRadius: positioning.isFirstHour ? '8px' : '0px',
-                          borderBottomLeftRadius: positioning.isLastHour ? '8px' : '0px',
-                          borderBottomRightRadius: positioning.isLastHour ? '8px' : '0px',
-                          zIndex: 2,
-                          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                          overflow: 'hidden'
-                        }}
-                      >
-                        {positioning.isFirstHour && (
-                          <>
-                            <div className="task-header">
-                              <div className="task-title-section">
-                                <h3 className={`task-title ${task.completed ? 'completed-text' : ''}`}>
-                                  {getRepeatIcon(task.repeat_type)} {task.title}
-                                </h3>
-                                <div className="task-badges">
-                                  {task.repeat_type && task.repeat_type !== 'none' && (
-                                    <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
-                                      🔄
-                                    </span>
-                                  )}
+                  <>
+                    {slot.tasks.map(task => {
+                      const priorityStyles = getPriorityStyles(task.priority || 3)
+                      const positioning = getTaskPositioning(task, slot.hour)
+                      
+                      // Calculate task duration in minutes to determine if it's a short task
+                      const getTaskDurationInMinutes = () => {
+                        if (!task.start_time || !task.finish_time) return 60 // Default 1 hour
+                        const [startHour, startMin] = task.start_time.split(':').map(Number)
+                        const [endHour, endMin] = task.finish_time.split(':').map(Number)
+                        const startTotal = startHour * 60 + startMin
+                        const endTotal = endHour * 60 + endMin
+                        return endTotal - startTotal
+                      }
+                      
+                      const taskDurationMinutes = getTaskDurationInMinutes()
+                      const isShortDuration = taskDurationMinutes <= 30
+                      
+                      return (
+                        <div 
+                          key={`${task.id}-${slot.hour}`}
+                          className={`hour-task-card continuous-task ${task.completed ? 'completed' : 'pending'}${isShortDuration ? ' short-duration' : ''}`}
+                          onMouseEnter={(e) => handleTaskMouseEnter(task, e)}
+                          onMouseLeave={handleTaskMouseLeave}
+                          style={{
+                            position: 'absolute',
+                            top: `${positioning.top}px`,
+                            left: '0.5rem',
+                            right: '0.5rem',
+                            height: `${positioning.height}px`,
+                            borderLeft: `4px solid ${priorityStyles.color}`,
+                            backgroundColor: task.completed ? 
+                              'rgba(34, 197, 94, 0.1)' : 
+                              priorityStyles.backgroundColor,
+                            borderTopLeftRadius: positioning.isFirstHour ? '8px' : '0px',
+                            borderTopRightRadius: positioning.isFirstHour ? '8px' : '0px',
+                            borderBottomLeftRadius: positioning.isLastHour ? '8px' : '0px',
+                            borderBottomRightRadius: positioning.isLastHour ? '8px' : '0px',
+                            zIndex: 2,
+                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          {positioning.isFirstHour && (
+                            <>
+                              <div className="task-header">
+                                <div className="task-title-section">
+                                  <h3 className={`task-title ${task.completed ? 'completed-text' : ''}`}>
+                                    {getRepeatIcon(task.repeat_type)} {task.title}
+                                  </h3>
+                                  <div className="task-badges">
+                                    {task.repeat_type && task.repeat_type !== 'none' && (
+                                      <span className="repeat-badge" title={formatRepeatType(task.repeat_type)}>
+                                        🔄
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="task-actions">
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleEditTask(task)
+                                    }}
+                                    className="edit-task-button"
+                                    title="Edit task"
+                                  >
+                                    <Edit2 size={14} />
+                                  </button>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      deleteTask(task.id)
+                                    }}
+                                    className="delete-button"
+                                    title="Delete task"
+                                  >
+                                    ×
+                                  </button>
                                 </div>
                               </div>
-                              <div className="task-actions">
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleEditTask(task)
-                                  }}
-                                  className="edit-task-button"
-                                  title="Edit task"
-                                >
-                                  <Edit2 size={14} />
-                                </button>
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    deleteTask(task.id)
-                                  }}
-                                  className="delete-button"
-                                  title="Delete task"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            </div>
-                            {task.description && positioning.height > 60 && !isShortDuration && (
-                              <p className={`task-description ${task.completed ? 'completed-text' : ''}`}>
-                                {task.description}
-                              </p>
-                            )}
-                            {/* Time display removed as per user request */}
-                          </>
-                        )}
-
+                              {task.description && positioning.height > 60 && !isShortDuration && (
+                                <p className={`task-description ${task.completed ? 'completed-text' : ''}`}>
+                                  {task.description}
+                                </p>
+                              )}
+                              {/* Time display removed as per user request */}
+                            </>
+                          )}
+                        </div>
+                      )
+                    })}
+                    {/* Show task name at 6 AM for tasks that start in early hours and continue past 6 AM */}
+                    {slot.hour === 6 && !isEarlyHoursExpanded && slot.tasks.filter(task => {
+                      if (!task.start_time || !task.finish_time) return false;
+                      const [startHour] = task.start_time.split(':').map(Number);
+                      const [endHour] = task.finish_time.split(':').map(Number);
+                      // Show task name at 6 AM if task starts before 6 AM (hour < 6) and ends at or after 6 AM
+                      return startHour < 6 && endHour >= 6;
+                    }).map(task => (
+                      <div key={`continuation-${task.id}`} className="hour-task-card early-hour-continuation">
+                        <div className="task-header">
+                          <div className="task-title-section">
+                            <h3 className={`task-title ${task.completed ? 'completed-text' : ''}`}>
+                              {getRepeatIcon(task.repeat_type)} {task.title}
+                            </h3>
+                          </div>
+                        </div>
                       </div>
-                    )
-                  })
+                    ))}
+                  </>
                 )}
               </div>
             </div>
