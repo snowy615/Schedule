@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { format, isToday } from 'date-fns'
 import { Plus, Clock, ChevronDown, ChevronUp, Edit2 } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
@@ -16,6 +16,8 @@ function TodayHourSchedulePage() {
   const [hoveredTask, setHoveredTask] = useState(null)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
   const [editingTask, setEditingTask] = useState(null)
+  const [dragState, setDragState] = useState(null) // For drag-to-adjust functionality
+  const dragRef = useRef(null)
   const { tasks, loading, addTask, toggleTask, deleteTask, updateTask } = useTasks()
   const today = new Date()
 
@@ -222,6 +224,127 @@ function TodayHourSchedulePage() {
     return Math.max(1, Math.ceil((endTotal - startTotal) / 60)) // At least 1 hour
   }
 
+  // Drag-to-adjust functionality
+  const startDrag = (task, hour, dragType, e) => {
+    e.stopPropagation();
+    const hourSlot = document.querySelector(`.hour-slot[data-hour="${hour}"] .tasks-column`);
+    if (!hourSlot) return;
+    
+    const rect = hourSlot.getBoundingClientRect();
+    const hourHeight = rect.height;
+    const pixelsPerMinute = hourHeight / 60; // 60 minutes per hour
+    
+    setDragState({
+      task,
+      dragType, // 'top' or 'bottom'
+      hour,
+      initialY: e.clientY,
+      hourSlotTop: rect.top,
+      hourSlotHeight: hourHeight,
+      pixelsPerMinute,
+      originalStartTime: task.start_time,
+      originalFinishTime: task.finish_time
+    });
+  };
+
+  const handleDrag = (e) => {
+    if (!dragState) return;
+    
+    const { 
+      task, 
+      dragType, 
+      hour, 
+      hourSlotTop, 
+      hourSlotHeight, 
+      pixelsPerMinute,
+      originalStartTime,
+      originalFinishTime
+    } = dragState;
+    
+    const currentY = e.clientY;
+    const deltaY = currentY - dragState.initialY;
+    const minutesDelta = Math.round(deltaY / pixelsPerMinute);
+    
+    // Parse original times
+    const [startHour, startMin] = originalStartTime.split(':').map(Number);
+    const [finishHour, finishMin] = originalFinishTime.split(':').map(Number);
+    
+    let newStartTime = originalStartTime;
+    let newFinishTime = originalFinishTime;
+    
+    if (dragType === 'top') {
+      // Adjust start time
+      let totalStartMinutes = startHour * 60 + startMin + minutesDelta;
+      // Ensure start time doesn't go past finish time (minimum 5 minutes)
+      const finishTotalMinutes = finishHour * 60 + finishMin;
+      totalStartMinutes = Math.min(totalStartMinutes, finishTotalMinutes - 5);
+      
+      // Ensure start time doesn't go before 12 AM
+      totalStartMinutes = Math.max(totalStartMinutes, 0);
+      
+      const newStartHour = Math.floor(totalStartMinutes / 60);
+      const newStartMin = totalStartMinutes % 60;
+      newStartTime = `${String(newStartHour).padStart(2, '0')}:${String(newStartMin).padStart(2, '0')}`;
+    } else if (dragType === 'bottom') {
+      // Adjust finish time
+      let totalFinishMinutes = finishHour * 60 + finishMin + minutesDelta;
+      // Ensure finish time doesn't go before start time (minimum 5 minutes)
+      const startTotalMinutes = startHour * 60 + startMin;
+      totalFinishMinutes = Math.max(totalFinishMinutes, startTotalMinutes + 5);
+      
+      // Ensure finish time doesn't go past 11:59 PM
+      totalFinishMinutes = Math.min(totalFinishMinutes, 23 * 60 + 59);
+      
+      const newFinishHour = Math.floor(totalFinishMinutes / 60);
+      const newFinishMin = totalFinishMinutes % 60;
+      newFinishTime = `${String(newFinishHour).padStart(2, '0')}:${String(newFinishMin).padStart(2, '0')}`;
+    }
+    
+    // Update the drag state with new times for visual feedback
+    setDragState({
+      ...dragState,
+      currentStartTime: newStartTime,
+      currentFinishTime: newFinishTime
+    });
+  };
+
+  const endDrag = async () => {
+    if (!dragState) return;
+    
+    const { task, dragType, currentStartTime, currentFinishTime } = dragState;
+    
+    try {
+      // Update task with new times
+      const updates = {};
+      if (dragType === 'top' && currentStartTime) {
+        updates.start_time = currentStartTime;
+      } else if (dragType === 'bottom' && currentFinishTime) {
+        updates.finish_time = currentFinishTime;
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        await updateTask(task.id, updates);
+      }
+    } catch (error) {
+      console.error('Failed to update task time:', error);
+    }
+    
+    setDragState(null);
+  };
+
+  // Add global mouse event listeners for drag operations
+  React.useEffect(() => {
+    if (dragState) {
+      document.addEventListener('mousemove', handleDrag);
+      document.addEventListener('mouseup', endDrag);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleDrag);
+        document.removeEventListener('mouseup', endDrag);
+      };
+    }
+  }, [dragState, handleDrag, endDrag]);
+
   const hourSlots = generateHourSlots()
   
   // Filter slots based on early hours and late hours expansion state
@@ -400,7 +523,7 @@ function TodayHourSchedulePage() {
           
           {/* Hour Slots */}
           {visibleSlots.map(slot => (
-            <div key={slot.hour} className="hour-slot">
+            <div key={slot.hour} className="hour-slot" data-hour={slot.hour}>
               <div className="time-label">
                 <span className="time-display">{slot.displayTime}</span>
               </div>
@@ -428,6 +551,12 @@ function TodayHourSchedulePage() {
                       const taskDurationMinutes = getTaskDurationInMinutes()
                       const isShortDuration = taskDurationMinutes <= 30
                       const isVeryShortDuration = taskDurationMinutes <= 5
+                      
+                      // Use current times during drag operation for visual feedback
+                      const displayStartTime = dragState && dragState.task.id === task.id ? 
+                        (dragState.currentStartTime || task.start_time) : task.start_time
+                      const displayFinishTime = dragState && dragState.task.id === task.id ? 
+                        (dragState.currentFinishTime || task.finish_time) : task.finish_time
                       
                       return (
                         <div 
@@ -458,6 +587,13 @@ function TodayHourSchedulePage() {
                         >
                           {positioning.isFirstHour && (
                             <>
+                              {/* Top drag handle for adjusting start time */}
+                              {positioning.isFirstHour && !task.completed && (
+                                <div 
+                                  className="task-drag-handle task-drag-top"
+                                  onMouseDown={(e) => startDrag(task, slot.hour, 'top', e)}
+                                />
+                              )}
                               <div className="task-header">
                                 <div className="task-title-section">
                                   <h3 className={`task-title ${task.completed ? 'completed-text' : ''}`}>
@@ -501,6 +637,13 @@ function TodayHourSchedulePage() {
                               )}
                               {/* Time display removed as per user request */}
                             </>
+                          )}
+                          {/* Bottom drag handle for adjusting finish time */}
+                          {positioning.isLastHour && !task.completed && (
+                            <div 
+                              className="task-drag-handle task-drag-bottom"
+                              onMouseDown={(e) => startDrag(task, slot.hour, 'bottom', e)}
+                            />
                           )}
                         </div>
                       )
