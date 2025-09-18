@@ -93,6 +93,10 @@
   min-height: 80px;
 }
 
+.hour-slot:hover {
+  background-color: rgba(100, 108, 255, 0.05);
+}
+
 .time-label {
   display: flex;
   align-items: flex-start;
@@ -308,12 +312,12 @@
   z-index: 10;
   border-radius: 2px;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s, background 0.2s;
 }
 
 .task-drag-handle:hover {
   opacity: 1;
-  background: rgba(100, 108, 255, 0.6);
+  background: rgba(100, 108, 255, 0.8);
 }
 
 .task-drag-top {
@@ -336,6 +340,21 @@
 .hour-task-card.dragging .task-drag-handle {
   opacity: 1;
   background: rgba(100, 108, 255, 0.8);
+}
+
+/* Drag-to-move styles */
+.hour-task-card.dragging-move {
+  position: fixed !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transform: rotate(3deg);
+  z-index: 1000;
+  transition: transform 0.1s ease;
+}
+
+/* Visual indicator for drag target */
+.hour-slot.drag-target {
+  background-color: rgba(100, 108, 255, 0.2);
+  border: 2px dashed #646cff;
 }
 
 /* Continuation text styles removed as per user request */

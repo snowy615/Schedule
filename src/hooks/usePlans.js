@@ -36,8 +36,7 @@ export function usePlans() {
     try {
       const plan = await apiService.createPlan(newPlan)
       setPlans(prev => [...prev, plan])
-      // Auto-refresh after adding a plan
-      window.location.reload()
+      // Removed auto-refresh to prevent blackout
       return plan
     } catch (error) {
       console.error('Failed to add plan:', error)
@@ -51,8 +50,7 @@ export function usePlans() {
     try {
       await apiService.deletePlan(planId)
       setPlans(prev => prev.filter(plan => plan.id !== planId))
-      // Auto-refresh after deleting a plan
-      window.location.reload()
+      // Removed auto-refresh to prevent blackout
       return { message: 'Plan deleted successfully' }
     } catch (error) {
       console.error('Failed to delete plan:', error)
@@ -70,8 +68,7 @@ export function usePlans() {
           plan.id === planId ? updatedPlan : plan
         )
       )
-      // Auto-refresh after completing a task
-      window.location.reload()
+      // Removed auto-refresh to prevent blackout
       return updatedPlan
     } catch (error) {
       console.error('Failed to complete current task:', error)
@@ -107,8 +104,7 @@ export function usePlans() {
           plan.id === planId ? updatedPlan : plan
         )
       )
-      // Auto-refresh after adding a task to plan
-      window.location.reload()
+      // Removed auto-refresh to prevent blackout
       return updatedPlan
     } catch (error) {
       console.error('Failed to add task to plan:', error)
@@ -137,8 +133,7 @@ export function usePlans() {
           plan.id === planId ? updatedPlan : plan
         )
       );
-      // Auto-refresh after updating a plan task
-      window.location.reload();
+      // Removed auto-refresh to prevent blackout
       return updatedPlan;
     } catch (error) {
       console.error('usePlans - Failed to update plan task:', error);
@@ -162,8 +157,7 @@ export function usePlans() {
           plan.id === planId ? updatedPlan : plan
         )
       )
-      // Auto-refresh after deleting a plan task
-      window.location.reload()
+      // Removed auto-refresh to prevent blackout
       return updatedPlan
     } catch (error) {
       console.error('Failed to delete plan task:', error)
@@ -188,8 +182,7 @@ export function usePlans() {
           plan.id === planId ? result.plan : plan
         )
       )
-      // Auto-refresh after setting individual task status
-      window.location.reload()
+      // Removed auto-refresh to prevent blackout
       return result
     } catch (error) {
       console.error('Failed to set individual task status:', error)
@@ -207,8 +200,7 @@ export function usePlans() {
       // Refresh plans to show updated sharing status
       const plansData = await apiService.getPlans()
       setPlans(plansData)
-      // Auto-refresh after sharing a plan
-      window.location.reload()
+      // Removed auto-refresh to prevent blackout
       return result
     } catch (error) {
       console.error('Failed to share plan:', error)
@@ -225,8 +217,7 @@ export function usePlans() {
       // Refresh plans to show updated sharing status
       const plansData = await apiService.getPlans()
       setPlans(plansData)
-      // Auto-refresh after unsharing a plan
-      window.location.reload()
+      // Removed auto-refresh to prevent blackout
       return result
     } catch (error) {
       console.error('Failed to unshare plan:', error)

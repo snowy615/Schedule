@@ -1,5 +1,5 @@
 import { getTodayDateString, parseDateSafely } from './dateUtils';
-import { isToday, isBefore, isAfter } from 'date-fns';
+import { isToday, isBefore } from 'date-fns';
 
 /**
  * Suggests 45-minute time blocks for tasks without user-input times
@@ -8,76 +8,53 @@ import { isToday, isBefore, isAfter } from 'date-fns';
  * @returns {Array} - Array of tasks with suggested time blocks
  */
 export async function suggestTimeBlocks(tasks, plans) {
-  console.log('suggestTimeBlocks called with tasks:', tasks);
-  console.log('suggestTimeBlocks called with plans:', plans);
+  console.log('=== DEBUG: suggestTimeBlocks called ===');
+  console.log('Total tasks received:', tasks.length);
+  console.log('Total plans received:', plans.length);
+  
   // Get today's date string
   const today = getTodayDateString();
+  console.log('Today\'s date:', today);
   
   // Filter tasks that need time suggestions:
   // 1. Overdue tasks (incomplete tasks from previous days) - assign to today
   // 2. Today's tasks without start/finish times
-  // 3. Tasks with times in the past that are incomplete - move to today
-  // 4. Plan tasks without start/finish times - assign to today for overdue plans
+  // 3. Plan tasks without start/finish times from today's or overdue plans
   
   const tasksNeedingSuggestions = [];
   
-  // Process regular tasks
+  // Process regular tasks - only incomplete tasks that need time assignment
   tasks.forEach(task => {
     try {
-      console.log('Processing task:', task);
       // Skip tasks without valid IDs
       if (!task.id) {
-        console.log('Skipping task without ID:', task);
+        return;
+      }
+      
+      // Skip completed tasks
+      if (task.completed) {
         return;
       }
       
       // Check if task is overdue (incomplete and from a previous date)
       const taskDate = parseDateSafely(task.date);
       const todayDate = parseDateSafely(today);
-      const isOverdue = !task.completed && isBefore(taskDate, todayDate);
+      const isOverdue = isBefore(taskDate, todayDate);
       
       // Check if task is for today
       const isTaskForToday = isToday(taskDate);
       
-      // Check if task has times in the past and is incomplete
-      const hasPastTimes = !task.completed && task.start_time && task.finish_time && isTimeInPast(task.start_time);
-      
       // Check if task lacks time information
       const hasNoTime = !task.start_time || !task.finish_time;
       
-      console.log('Task analysis:', {
-        id: task.id,
-        title: task.title,
-        date: task.date,
-        isOverdue,
-        isTaskForToday,
-        hasPastTimes,
-        hasNoTime
-      });
-      
-      // Add to suggestions list if it's overdue, has past times, or today's task without times
-      if ((isOverdue || hasPastTimes || isTaskForToday) && hasNoTime) {
-        console.log('Adding task to suggestions:', task);
+      // Only add tasks that are either overdue or for today AND have no time
+      if ((isOverdue || isTaskForToday) && hasNoTime) {
         tasksNeedingSuggestions.push({
           ...task,
-          // For overdue tasks or tasks with past times, we'll assign times on today's date
-          date: (isOverdue || hasPastTimes) ? today : task.date,
+          // For overdue tasks, we'll assign times on today's date
+          date: isOverdue ? today : task.date,
           type: 'task',
-          is_overdue: isOverdue || hasPastTimes
-        });
-      }
-      // Special case: task has times but they're in the past and task is incomplete
-      else if ((isOverdue || hasPastTimes) && !hasNoTime) {
-        console.log('Adding task with past times to suggestions:', task);
-        tasksNeedingSuggestions.push({
-          ...task,
-          // Move task to today's date
-          date: today,
-          type: 'task',
-          is_overdue: true,
-          // We'll suggest new times for this task
-          start_time: null,
-          finish_time: null
+          is_overdue: isOverdue
         });
       }
     } catch (error) {
@@ -85,13 +62,13 @@ export async function suggestTimeBlocks(tasks, plans) {
     }
   });
   
-  // Process plan tasks
+  console.log('Regular tasks needing suggestions:', tasksNeedingSuggestions.length);
+  
+  // Process plan tasks - only from plans that are for today or overdue
   plans.forEach(plan => {
     try {
-      console.log('Processing plan:', plan);
       // Skip plans without valid IDs
       if (!plan.id) {
-        console.log('Skipping plan without ID:', plan);
         return;
       }
       
@@ -101,46 +78,33 @@ export async function suggestTimeBlocks(tasks, plans) {
       const isPlanForToday = isToday(planDate);
       const isPlanOverdue = isBefore(planDate, todayDate);
       
-      console.log('Plan analysis:', {
-        id: plan.id,
-        title: plan.title,
-        date: plan.date,
-        isPlanForToday,
-        isPlanOverdue
-      });
-      
+      // Only process plan tasks if the plan is for today or overdue
       if (isPlanForToday || isPlanOverdue) {
         plan.tasks.forEach(task => {
           try {
-            console.log('Processing plan task:', task);
             // Skip tasks without valid IDs
             if (!task.id) {
-              console.log('Skipping plan task without ID:', task);
+              return;
+            }
+            
+            // Skip completed tasks
+            if (task.completed) {
               return;
             }
             
             // Check if task lacks time information
             const hasNoTime = !task.start_time || !task.finish_time;
             
-            // Check if task has times in the past
-            const hasPastTimes = task.start_time && isTimeInPast(task.start_time);
-            
-            console.log('Plan task analysis:', {
-              id: task.id,
-              title: task.title,
-              hasNoTime,
-              hasPastTimes
-            });
-            
-            if (hasNoTime || hasPastTimes) {
+            // Only add plan tasks that need time suggestions
+            if (hasNoTime) {
               tasksNeedingSuggestions.push({
                 ...task,
                 plan_id: plan.id,
                 plan_title: plan.title,
-                // For overdue plans or tasks with past times, we'll assign times on today's date
-                date: (isPlanOverdue || hasPastTimes) ? today : plan.date,
+                // For overdue plans, we'll assign times on today's date
+                date: isPlanOverdue ? today : plan.date,
                 type: 'plan_task',
-                is_overdue: isPlanOverdue || hasPastTimes
+                is_overdue: isPlanOverdue
               });
             }
           } catch (error) {
@@ -153,15 +117,29 @@ export async function suggestTimeBlocks(tasks, plans) {
     }
   });
   
-  console.log('Tasks needing suggestions:', tasksNeedingSuggestions);
+  console.log('Total tasks needing suggestions (including plan tasks):', tasksNeedingSuggestions.length);
   
-  // Find available time slots for today (since all tasks will be assigned to today)
+  // Filter out duplicates and ensure we only have unique tasks
+  const uniqueTasks = [];
+  const taskIds = new Set();
+  
+  tasksNeedingSuggestions.forEach(task => {
+    const uniqueId = task.type === 'plan_task' ? `plan_${task.plan_id}_task_${task.id}` : `task_${task.id}`;
+    if (!taskIds.has(uniqueId)) {
+      taskIds.add(uniqueId);
+      uniqueTasks.push(task);
+    }
+  });
+  
+  console.log('Unique tasks needing suggestions:', uniqueTasks.length);
+  
+  // Find available time slots for today
   const availableSlots = findAvailableTimeSlots(tasks, plans, today);
   console.log('Available slots:', availableSlots);
   
   // Assign time blocks to tasks needing suggestions
-  const tasksWithSuggestions = assignTimeBlocks(tasksNeedingSuggestions, availableSlots);
-  console.log('Tasks with suggestions:', tasksWithSuggestions);
+  const tasksWithSuggestions = assignTimeBlocks(uniqueTasks, availableSlots);
+  console.log('Final tasks with suggestions:', tasksWithSuggestions.length);
   
   return tasksWithSuggestions;
 }
@@ -186,7 +164,7 @@ function isTimeInPast(time) {
  */
 function findAvailableTimeSlots(tasks, plans, date) {
   try {
-    // Get all tasks and plan tasks for the given date
+    // Get all tasks and plan tasks for the given date that already have times
     const scheduledItems = [];
     
     // Collect scheduled tasks for the date
@@ -285,7 +263,7 @@ function assignTimeBlocks(tasks, availableSlots) {
     // Assign time blocks to tasks
     const tasksWithSuggestions = [];
     
-    // Get current time for assigning times after current time for both overdue and today's tasks
+    // Get current time for assigning times after current time
     const now = new Date();
     const currentTimeString = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     
@@ -306,9 +284,8 @@ function assignTimeBlocks(tasks, availableSlots) {
     let slotIndex = 0;
     let currentTimeInSlot = sortedSlots.length > 0 ? sortedSlots[0].start_time : '08:00';
     
-    // Find a slot after current time for all tasks (both overdue and today's)
+    // Find a slot after current time
     for (let i = 0; i < sortedSlots.length; i++) {
-      // Only consider slots that start after current time and end before 10 PM
       if (sortedSlots[i].start_time >= currentTimeString && sortedSlots[i].start_time < endTimeLimit) {
         slotIndex = i;
         currentTimeInSlot = sortedSlots[i].start_time;
@@ -316,7 +293,7 @@ function assignTimeBlocks(tasks, availableSlots) {
       }
     }
     
-    // Process all tasks (both overdue and today's) starting from current time
+    // Process all tasks starting from current time
     tasks.forEach(task => {
       try {
         // Find a suitable 45-minute slot
