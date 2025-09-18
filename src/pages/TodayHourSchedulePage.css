@@ -342,25 +342,11 @@
   background: rgba(100, 108, 255, 0.8);
 }
 
-/* Drag-to-move styles */
-.hour-task-card.dragging-move {
-  position: fixed !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  transform: rotate(3deg);
-  z-index: 1000;
-  transition: transform 0.1s ease;
-}
-
 /* Visual indicator for drag target */
-.hour-slot.drag-target {
+/* .hour-slot.drag-target {
   background-color: rgba(100, 108, 255, 0.2);
   border: 2px dashed #646cff;
-}
-
-/* Continuation text styles removed as per user request */
-
-/* Removed end indicator styles as per user request */
-/* Removed continuation text styles as per user request */
+} */
 
 /* Task name display at 6 AM for tasks continuing from early hours */
 .hour-task-card.early-hour-continuation {

@@ -232,6 +232,9 @@ function TodayHourSchedulePage() {
     // Prevent drag on completed tasks
     if (task.completed) return;
     
+    // Only allow dragging for top/bottom handles (time adjustment), not for moving tasks
+    if (dragType === 'move') return;
+    
     const hourSlot = document.querySelector(`.hour-slot[data-hour="${hour}"] .tasks-column`);
     if (!hourSlot) return;
     
@@ -241,7 +244,7 @@ function TodayHourSchedulePage() {
     
     setDragState({
       task,
-      dragType, // 'top' or 'bottom' or 'move'
+      dragType, // 'top' or 'bottom' only
       hour,
       initialY: e.clientY,
       hourSlotTop: rect.top,
@@ -305,49 +308,6 @@ function TodayHourSchedulePage() {
       const newFinishHour = Math.floor(totalFinishMinutes / 60);
       const newFinishMin = totalFinishMinutes % 60;
       newFinishTime = `${String(newFinishHour).padStart(2, '0')}:${String(newFinishMin).padStart(2, '0')}`;
-    } else if (dragType === 'move') {
-      // Move entire task
-      const durationMinutes = (finishHour * 60 + finishMin) - (startHour * 60 + startMin);
-      
-      // Find target hour slot
-      const elements = document.elementsFromPoint(e.clientX, e.clientY);
-      let targetHourSlot = null;
-      for (const element of elements) {
-        const slot = element.closest('.hour-slot');
-        if (slot) {
-          targetHourSlot = slot;
-          break;
-        }
-      }
-      
-      if (targetHourSlot) {
-        const targetHour = parseInt(targetHourSlot.dataset.hour);
-        const tasksColumn = targetHourSlot.querySelector('.tasks-column');
-        if (tasksColumn) {
-          const columnRect = tasksColumn.getBoundingClientRect();
-          const relativeY = e.clientY - columnRect.top;
-          const minutesInHour = Math.floor((relativeY / columnRect.height) * 60);
-          
-          // Calculate new start time
-          let newStartTotalMinutes = targetHour * 60 + minutesInHour;
-          // Ensure we don't go before 12 AM
-          newStartTotalMinutes = Math.max(newStartTotalMinutes, 0);
-          // Ensure we have enough time for the task duration
-          newStartTotalMinutes = Math.min(newStartTotalMinutes, 24 * 60 - durationMinutes);
-          
-          // Calculate new finish time
-          const newFinishTotalMinutes = newStartTotalMinutes + durationMinutes;
-          
-          // Convert back to time format
-          const newStartHour = Math.floor(newStartTotalMinutes / 60);
-          const newStartMin = newStartTotalMinutes % 60;
-          const newFinishHour = Math.floor(newFinishTotalMinutes / 60);
-          const newFinishMin = newFinishTotalMinutes % 60;
-          
-          newStartTime = `${String(newStartHour).padStart(2, '0')}:${String(newStartMin).padStart(2, '0')}`;
-          newFinishTime = `${String(newFinishHour).padStart(2, '0')}:${String(newFinishMin).padStart(2, '0')}`;
-        }
-      }
     }
     
     // Update the drag state with new times for visual feedback
@@ -366,10 +326,10 @@ function TodayHourSchedulePage() {
     try {
       // Update task with new times
       const updates = {};
-      if ((dragType === 'top' || dragType === 'move') && currentStartTime) {
+      if (dragType === 'top' && currentStartTime) {
         updates.start_time = currentStartTime;
       }
-      if ((dragType === 'bottom' || dragType === 'move') && currentFinishTime) {
+      if (dragType === 'bottom' && currentFinishTime) {
         updates.finish_time = currentFinishTime;
       }
       
@@ -614,7 +574,6 @@ function TodayHourSchedulePage() {
                         <div 
                           key={`${task.id}-${slot.hour}`}
                           className={`hour-task-card continuous-task ${task.completed ? 'completed' : 'pending'}${isShortDuration ? ' short-duration' : ''}${isVeryShortDuration ? ' very-short' : ''}`}
-                          onMouseDown={!task.completed ? (e) => startDrag(task, slot.hour, 'move', e) : undefined}
                           onMouseEnter={(e) => handleTaskMouseEnter(task, e)}
                           onMouseLeave={handleTaskMouseLeave}
                           style={{
@@ -636,9 +595,8 @@ function TodayHourSchedulePage() {
                             overflow: 'hidden',
                             display: 'flex',
                             flexDirection: 'column',
-                            cursor: task.completed ? 'default' : 'move',
+                            cursor: task.completed ? 'default' : 'default',
                             opacity: isDragging && dragState && dragState.task.id === task.id ? 0.8 : 1,
-                            transform: isDragging && dragState && dragState.task.id === task.id && dragState.dragType === 'move' ? 'rotate(2deg)' : 'none'
                           }}
                         >
                           {positioning.isFirstHour && (
