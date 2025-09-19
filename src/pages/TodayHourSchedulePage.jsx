@@ -157,7 +157,14 @@ function TodayHourSchedulePage() {
 
   // Calculate task positioning within hour slots
   const getTaskPositioning = (task, hour) => {
-    if (!task.start_time || !task.finish_time) {
+    // Use current drag times if this task is being dragged
+    const isTaskBeingDragged = dragState && dragState.task.id === task.id;
+    const startTime = isTaskBeingDragged ? 
+      (dragState.currentStartTime || task.start_time) : task.start_time;
+    const finishTime = isTaskBeingDragged ? 
+      (dragState.currentFinishTime || task.finish_time) : task.finish_time;
+    
+    if (!startTime || !finishTime) {
       // For tasks without proper time, show them at the top of the hour
       return {
         top: 0,
@@ -170,8 +177,8 @@ function TodayHourSchedulePage() {
       }
     }
     
-    const [startHour, startMin] = task.start_time.split(':').map(Number)
-    const [endHour, endMin] = task.finish_time.split(':').map(Number)
+    const [startHour, startMin] = startTime.split(':').map(Number)
+    const [endHour, endMin] = finishTime.split(':').map(Number)
     
     const taskStartTime = startHour + startMin / 60
     const taskEndTime = endHour + endMin / 60
@@ -190,12 +197,12 @@ function TodayHourSchedulePage() {
     
     // Determine if this is the first, last, or middle hour of the task
     const isFirstHour = hour === startHour
-    const isLastHour = (hour === endHour && endMin > 0) || (hour === endHour - 1 && endMin === 0)
+    let isLastHour = (hour === endHour && endMin > 0) || (hour === endHour - 1 && endMin === 0)
     
     // Special case: if task ends exactly at hour boundary, this hour is the last hour
     const endsAtBoundary = taskEndTime === hourEnd && endMin === 0
     if (endsAtBoundary) {
-      isLastHour = true
+      isLastHour = hour < endHour // Only true if this hour is before the end hour
     }
     
     const isSingleHour = Math.floor(taskStartTime) === Math.floor(taskEndTime) && 
@@ -342,7 +349,7 @@ function TodayHourSchedulePage() {
     
     setDragState(null);
     setIsDragging(false);
-  }, [dragState, isDragging, updateTask]);
+  }, [updateTask]);
 
   // Add global mouse event listeners for drag operations
   React.useEffect(() => {
