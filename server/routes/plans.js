@@ -45,14 +45,17 @@ router.post('/', async (req, res) => {
 // Get a specific plan with its tasks
 router.get('/:id', async (req, res) => {
   try {
+    console.log('Getting plan:', req.params.id, 'for user:', req.user.id);
     // Use findByUserId to get the plan with shared information
     const plans = await Plan.findByUserId(req.user.id);
     const plan = plans.find(p => p.id == req.params.id);
     
     if (!plan) {
+      console.log('Plan not found:', req.params.id, 'for user:', req.user.id);
       return res.status(404).json({ error: 'Plan not found' });
     }
     
+    console.log('Found plan:', plan.id, 'for user:', req.user.id, 'is_shared:', plan.is_shared, 'shared_permissions:', plan.shared_permissions);
     res.json({ plan });
   } catch (error) {
     console.error('Get plan error:', error);
@@ -77,15 +80,21 @@ router.get('/:id/current-task', async (req, res) => {
 // Complete current task and move to next
 router.patch('/:id/complete-task', async (req, res) => {
   try {
+    console.log('Completing task for plan:', req.params.id, 'user:', req.user.id);
     const updatedPlan = await Plan.completeCurrentTask(req.params.id, req.user.id);
+    console.log('Task completed successfully for plan:', req.params.id);
     res.json({
       message: 'Task completed successfully',
       plan: updatedPlan
     });
   } catch (error) {
+    console.error('Complete task error for plan:', req.params.id, 'user:', req.user.id, 'error:', error);
     if (error.message === 'Plan not found or unauthorized' || 
         error.message === 'Current task not found') {
       return res.status(404).json({ error: error.message });
+    }
+    if (error.message === 'Insufficient permissions to modify this plan') {
+      return res.status(403).json({ error: error.message });
     }
     console.error('Complete task error:', error);
     res.status(500).json({ error: 'Internal server error' });

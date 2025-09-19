@@ -7,6 +7,7 @@ export function useTasks() {
   const [loading, setLoading] = useState(false)
   const { user } = useAuth()
 
+  
   // Load tasks from API when user changes
   useEffect(() => {
     if (!user) {

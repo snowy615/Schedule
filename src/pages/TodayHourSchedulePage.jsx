@@ -613,6 +613,13 @@ function TodayHourSchedulePage() {
                               )}
                               <div className="task-header">
                                 <div className="task-title-section">
+                                  <input
+                                    type="checkbox"
+                                    checked={task.completed}
+                                    onChange={() => toggleTask(task.id)}
+                                    className="task-checkbox"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
                                   <h3 className={`task-title ${task.completed ? 'completed-text' : ''}`}>
                                     {getRepeatIcon(task.repeat_type)} {task.title}
                                   </h3>
@@ -679,6 +686,14 @@ function TodayHourSchedulePage() {
                       <div key={`continuation-${task.id}`} className="hour-task-card early-hour-continuation">
                         <div className="task-header">
                           <div className="task-title-section">
+                            {/* Add checkbox for task completion in continuation display */}
+                            <input
+                              type="checkbox"
+                              checked={task.completed}
+                              onChange={() => toggleTask(task.id)}
+                              className="task-checkbox"
+                              onClick={(e) => e.stopPropagation()}
+                            />
                             <h3 className={`task-title ${task.completed ? 'completed-text' : ''}`}>
                               {getRepeatIcon(task.repeat_type)} {task.title}
                             </h3>

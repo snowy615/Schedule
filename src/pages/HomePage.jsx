@@ -164,15 +164,57 @@ function HomePage() {
   }
 
   const handlePlanClick = async (plan) => {
+    console.log('HomePage - handlePlanClick called with plan:', plan);
     try {
       // For shared plans, we need to fetch the latest plan data to ensure
       // we have the correct permissions information
+      console.log('HomePage - Fetching updated plan data for plan:', plan.id);
       const updatedPlan = await apiService.getPlan(plan.id);
+      console.log('HomePage - Received updated plan data:', updatedPlan);
+      
+      // Validate plan data
+      if (!updatedPlan) {
+        throw new Error('Plan not found');
+      }
+      
+      if (!Array.isArray(updatedPlan.tasks)) {
+        throw new Error('Invalid plan data: tasks is not an array');
+      }
+      
+      // Validate current_task_index
+      if (typeof updatedPlan.current_task_index !== 'number') {
+        console.warn('HomePage - Invalid current_task_index, defaulting to 0');
+        updatedPlan.current_task_index = 0;
+      }
+      
+      // Ensure current_task_index is within bounds
+      if (updatedPlan.current_task_index > updatedPlan.tasks.length) {
+        console.warn('HomePage - current_task_index out of bounds, setting to 0');
+        updatedPlan.current_task_index = 0;
+      }
+      
       setSelectedPlan(updatedPlan);
     } catch (error) {
       console.error('Failed to get plan details:', error);
       // Fallback to the original plan data if API call fails
-      setSelectedPlan(plan);
+      console.log('HomePage - Using fallback plan data:', plan);
+      
+      // Validate fallback plan data
+      const fallbackPlan = { ...plan };
+      if (!Array.isArray(fallbackPlan.tasks)) {
+        fallbackPlan.tasks = [];
+      }
+      
+      if (typeof fallbackPlan.current_task_index !== 'number') {
+        fallbackPlan.current_task_index = 0;
+      }
+      
+      // Ensure current_task_index is within bounds
+      if (fallbackPlan.current_task_index > fallbackPlan.tasks.length) {
+        fallbackPlan.current_task_index = 0;
+      }
+      
+      setSelectedPlan(fallbackPlan);
     }
   }
 
@@ -219,8 +261,12 @@ function HomePage() {
           setSelectedPlan(null);
         }
       }
+      
+      return updatedPlan;
     } catch (error) {
       console.error('Failed to complete current task:', error);
+      // Re-throw the error so it can be handled by the caller
+      throw error;
     }
   }
 
@@ -902,9 +948,20 @@ function HomePage() {
 
       {selectedPlan && (
         <PlanDetailModal
-          plan={selectedPlan}
+          plan={(() => {
+            console.log('HomePage - Passing plan to PlanDetailModal:', selectedPlan);
+            return selectedPlan;
+          })()}
           onClose={() => setSelectedPlan(null)}
-          onCompleteTask={() => handleCompleteCurrentTask(selectedPlan.id)}
+          onCompleteTask={async () => {
+            try {
+              return await handleCompleteCurrentTask(selectedPlan.id);
+            } catch (error) {
+              console.error('HomePage - Failed to complete task:', error);
+              // Re-throw the error so it can be handled by the PlanDetailModal
+              throw error;
+            }
+          }}
           onAddTask={handleAddTaskToPlan}
           onUpdateTask={handleUpdatePlanTask}
           onDeleteTask={handleDeletePlanTask}

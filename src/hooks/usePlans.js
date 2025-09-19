@@ -62,7 +62,9 @@ export function usePlans() {
     if (!user) return
     
     try {
+      console.log('usePlans - Completing current task for plan:', planId);
       const updatedPlan = await apiService.completeCurrentTask(planId)
+      console.log('usePlans - Task completed successfully for plan:', planId, updatedPlan);
       setPlans(prev => 
         prev.map(plan => 
           plan.id === planId ? updatedPlan : plan
@@ -71,10 +73,14 @@ export function usePlans() {
       // Removed auto-refresh to prevent blackout
       return updatedPlan
     } catch (error) {
-      console.error('Failed to complete current task:', error)
+      console.error('Failed to complete current task for plan:', planId, error);
       // Check if it's a permission error
       if (error.message && error.message.includes('Insufficient permissions')) {
         alert('You do not have permission to modify this plan.')
+      } else if (error.message && error.message.includes('Current task not found')) {
+        alert('Current task not found. The plan may be corrupted.')
+      } else if (error.message && error.message.includes('Plan not found or unauthorized')) {
+        alert('Plan not found or you are not authorized to modify it.')
       } else {
         alert('Failed to complete task. Please try again.')
       }

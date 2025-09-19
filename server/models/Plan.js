@@ -417,7 +417,21 @@ class Plan {
           if (taskErr) {
             reject(taskErr);
           } else {
-            resolve(task ? { ...task, completed: Boolean(task.completed) } : null);
+            // Check if task exists
+            if (!task) {
+              // Get total task count to provide better error information
+              db.get('SELECT COUNT(*) as total_tasks FROM tasks WHERE plan_id = ?', [planId], (countErr, countResult) => {
+                if (countErr) {
+                  reject(countErr);
+                } else {
+                  const totalTasks = countResult.total_tasks;
+                  console.error('Current task not found for plan:', planId, 'index:', plan.current_task_index, 'total tasks:', totalTasks);
+                  resolve(null);
+                }
+              });
+            } else {
+              resolve(task ? { ...task, completed: Boolean(task.completed) } : null);
+            }
           }
         });
       });
@@ -428,6 +442,8 @@ class Plan {
   static async completeCurrentTask(planId, userId) {
     return new Promise((resolve, reject) => {
       const db = database.getDB();
+      
+      console.log('Starting completeCurrentTask for plan:', planId, 'user:', userId);
       
       db.serialize(() => {
         db.run('BEGIN TRANSACTION');
@@ -440,201 +456,174 @@ class Plan {
           WHERE p.id = ? AND (p.user_id = ? OR sp.shared_with_user_id = ?)
         `, [userId, planId, userId, userId], (err, plan) => {
           if (err) {
+            console.error('Database error getting plan:', err);
             db.run('ROLLBACK');
             reject(err);
             return;
           }
           
           if (!plan) {
+            console.error('Plan not found or unauthorized for plan:', planId, 'user:', userId);
             db.run('ROLLBACK');
             reject(new Error('Plan not found or unauthorized'));
             return;
           }
           
-          // Check permissions - only owner or users with write permissions can modify
-          // For individual permission, users can only update their own task status
-          if (plan.user_id !== userId && plan.shared_permissions !== 'write' && plan.shared_permissions !== 'individual') {
+          console.log('Found plan:', plan.id, 'user:', userId, 'plan.user_id:', plan.user_id, 'permissions:', plan.shared_permissions);
+          
+          // Check permissions - only owner or users with write permissions can use this method
+          // For individual permission, users should use the individual task completion endpoint
+          const isOwner = plan.user_id === userId;
+          const hasWritePermission = plan.shared_permissions === 'write';
+          
+          console.log('Permission check - isOwner:', isOwner, 'hasWritePermission:', hasWritePermission);
+          
+          if (!isOwner && !hasWritePermission) {
+            console.error('Insufficient permissions for plan:', planId, 'user:', userId, 'plan.user_id:', plan.user_id, 'permission:', plan.shared_permissions);
             db.run('ROLLBACK');
             reject(new Error('Insufficient permissions to modify this plan'));
             return;
           }
           
-          // If user has individual permission, we need to handle task completion differently
-          if (plan.shared_permissions === 'individual') {
-            // For individual permission, we'll need to get the current task and set individual status
-            // Get the current task based on current_task_index
-            db.get(`
-              SELECT * FROM tasks 
-              WHERE plan_id = ? AND plan_order = ?
-            `, [planId, plan.current_task_index], (taskErr, task) => {
-              if (taskErr) {
-                db.run('ROLLBACK');
-                reject(taskErr);
-                return;
-              }
-              
-              if (!task) {
-                db.run('ROLLBACK');
-                reject(new Error('Current task not found'));
-                return;
-              }
-              
-              // Set individual task status instead of updating the main task
-              Plan.setIndividualTaskStatus(task.id, userId, true)
-                .then(() => {
-                  // Check if there are more tasks
-                  db.get(`
-                    SELECT COUNT(*) as total_tasks FROM tasks 
-                    WHERE plan_id = ?
-                  `, [planId], (countErr, countResult) => {
-                    if (countErr) {
-                      db.run('ROLLBACK');
-                      reject(countErr);
-                      return;
-                    }
-                    
-                    const nextTaskIndex = plan.current_task_index + 1;
-                    const totalTasks = countResult.total_tasks;
-                    const isLastTask = nextTaskIndex >= totalTasks;
-                    
-                    // If this was the last task, mark plan as completed for this user
-                    // Otherwise, move to next task
-                    const newTaskIndex = isLastTask ? totalTasks : nextTaskIndex;
-                    
-                    // Update plan completion status for this user
-                    const completedAt = isLastTask ? new Date().toISOString() : null;
-                    db.run(`
-                      INSERT OR REPLACE INTO plan_completion_status 
-                      (plan_id, user_id, completed, completed_at, updated_at) 
-                      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-                    `, [planId, userId, isLastTask ? 1 : 0, completedAt], (completionErr) => {
-                      if (completionErr) {
-                        db.run('ROLLBACK');
-                        reject(completionErr);
-                        return;
-                      }
-                      
-                      // Update plan's current_task_index
-                      db.run(`
-                        UPDATE plans 
-                        SET current_task_index = ?, updated_at = CURRENT_TIMESTAMP 
-                        WHERE id = ?
-                      `, [newTaskIndex, planId], (planUpdateErr) => {
-                        if (planUpdateErr) {
-                          db.run('ROLLBACK');
-                          reject(planUpdateErr);
-                          return;
-                        }
-                        
-                        db.run('COMMIT', (commitErr) => {
-                          if (commitErr) {
-                            reject(commitErr);
-                          } else {
-                            // Re-fetch the plan with updated individual task statuses
-                            Plan.findByUserId(userId).then(plans => {
-                              const updatedPlan = plans.find(p => p.id == planId);
-                              resolve(updatedPlan);
-                            }).catch(reject);
-                          }
-                        });
-                      });
-                    });
-                  });
-                })
-                .catch(setStatusErr => {
+          console.log('Permission check passed for plan:', planId, 'user:', userId);
+          
+          // Standard completion logic for owner/write permissions
+          // Get the current task
+          db.get(`
+            SELECT * FROM tasks 
+            WHERE plan_id = ? AND plan_order = ?
+          `, [planId, plan.current_task_index], (taskErr, task) => {
+            if (taskErr) {
+              console.error('Database error getting current task:', taskErr);
+              db.run('ROLLBACK');
+              reject(taskErr);
+              return;
+            }
+            
+            if (!task) {
+              // Get total task count to provide better error information
+              db.get('SELECT COUNT(*) as total_tasks FROM tasks WHERE plan_id = ?', [planId], (countErr, countResult) => {
+                if (countErr) {
+                  console.error('Database error counting tasks:', countErr);
                   db.run('ROLLBACK');
-                  reject(setStatusErr);
-                });
-            });
-          } else {
-            // Standard completion logic for owner/write permissions
-            // Get the current task
-            db.get(`
-              SELECT * FROM tasks 
-              WHERE plan_id = ? AND plan_order = ?
-            `, [planId, plan.current_task_index], (taskErr, task) => {
-              if (taskErr) {
-                db.run('ROLLBACK');
-                reject(taskErr);
-                return;
-              }
-              
-              if (!task) {
-                db.run('ROLLBACK');
-                reject(new Error('Current task not found'));
-                return;
-              }
-              
-              // Mark current task as completed
-              db.run(`
-                UPDATE tasks 
-                SET completed = 1, updated_at = CURRENT_TIMESTAMP 
-                WHERE id = ?
-              `, [task.id], (updateErr) => {
-                if (updateErr) {
-                  db.run('ROLLBACK');
-                  reject(updateErr);
+                  reject(countErr);
                   return;
                 }
                 
-                // Check if there are more tasks
-                db.get(`
-                  SELECT COUNT(*) as total_tasks FROM tasks 
-                  WHERE plan_id = ?
-                `, [planId], (countErr, countResult) => {
-                  if (countErr) {
+                const totalTasks = countResult.total_tasks;
+                console.error('Current task not found for plan:', planId, 'index:', plan.current_task_index, 'total tasks:', totalTasks);
+                
+                if (totalTasks === 0) {
+                  db.run('ROLLBACK');
+                  reject(new Error('Plan has no tasks'));
+                  return;
+                } else if (plan.current_task_index >= totalTasks) {
+                  db.run('ROLLBACK');
+                  reject(new Error('Plan is corrupted: current task index is out of bounds. Please contact support.'));
+                  return;
+                } else {
+                  db.run('ROLLBACK');
+                  reject(new Error('Current task not found. The plan may be corrupted.'));
+                  return;
+                }
+              });
+              return;
+            }
+            
+            console.log('Found current task:', task.id, 'for plan:', planId);
+            
+            // Mark current task as completed
+            db.run(`
+              UPDATE tasks 
+              SET completed = 1, updated_at = CURRENT_TIMESTAMP 
+              WHERE id = ?
+            `, [task.id], (updateErr) => {
+              if (updateErr) {
+                console.error('Database error updating task:', updateErr);
+                db.run('ROLLBACK');
+                reject(updateErr);
+                return;
+              }
+              
+              console.log('Task marked as completed:', task.id);
+              
+              // Check if there are more tasks
+              db.get(`
+                SELECT COUNT(*) as total_tasks FROM tasks 
+                WHERE plan_id = ?
+              `, [planId], (countErr, countResult) => {
+                if (countErr) {
+                  console.error('Database error counting tasks:', countErr);
+                  db.run('ROLLBACK');
+                  reject(countErr);
+                  return;
+                }
+                
+                const nextTaskIndex = plan.current_task_index + 1;
+                const totalTasks = countResult.total_tasks;
+                const isLastTask = nextTaskIndex >= totalTasks;
+                
+                console.log('Task count - total:', totalTasks, 'current index:', plan.current_task_index, 'next index:', nextTaskIndex, 'is last:', isLastTask);
+                
+                // Validate that current_task_index is within bounds
+                if (plan.current_task_index >= totalTasks) {
+                  console.error('Current task index out of bounds for plan:', planId, 'index:', plan.current_task_index, 'total tasks:', totalTasks);
+                  db.run('ROLLBACK');
+                  reject(new Error('Plan is corrupted: current task index is out of bounds'));
+                  return;
+                }
+                
+                // If this was the last task, mark plan as completed
+                // Otherwise, move to next task
+                const newTaskIndex = isLastTask ? totalTasks : nextTaskIndex;
+                const planCompleted = isLastTask ? 1 : 0;
+                
+                // Update plan completion status for the owner
+                const completedAt = isLastTask ? new Date().toISOString() : null;
+                db.run(`
+                  INSERT OR REPLACE INTO plan_completion_status 
+                  (plan_id, user_id, completed, completed_at, updated_at) 
+                  VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                `, [planId, plan.user_id, planCompleted, completedAt], (completionErr) => {
+                  if (completionErr) {
+                    console.error('Database error updating plan completion status:', completionErr);
                     db.run('ROLLBACK');
-                    reject(countErr);
+                    reject(completionErr);
                     return;
                   }
                   
-                  const nextTaskIndex = plan.current_task_index + 1;
-                  const totalTasks = countResult.total_tasks;
-                  const isLastTask = nextTaskIndex >= totalTasks;
+                  console.log('Plan completion status updated for plan:', planId, 'completed:', planCompleted);
                   
-                  // If this was the last task, mark plan as completed
-                  // Otherwise, move to next task
-                  const newTaskIndex = isLastTask ? totalTasks : nextTaskIndex;
-                  const planCompleted = isLastTask ? 1 : 0;
-                  
-                  // Update plan completion status for the owner
-                  const completedAt = isLastTask ? new Date().toISOString() : null;
+                  // Update plan
                   db.run(`
-                    INSERT OR REPLACE INTO plan_completion_status 
-                    (plan_id, user_id, completed, completed_at, updated_at) 
-                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-                  `, [planId, plan.user_id, planCompleted, completedAt], (completionErr) => {
-                    if (completionErr) {
+                    UPDATE plans 
+                    SET current_task_index = ?, completed = ?, updated_at = CURRENT_TIMESTAMP 
+                    WHERE id = ?
+                  `, [newTaskIndex, planCompleted, planId], (planUpdateErr) => {
+                    if (planUpdateErr) {
+                      console.error('Database error updating plan:', planUpdateErr);
                       db.run('ROLLBACK');
-                      reject(completionErr);
+                      reject(planUpdateErr);
                       return;
                     }
                     
-                    // Update plan
-                    db.run(`
-                      UPDATE plans 
-                      SET current_task_index = ?, completed = ?, updated_at = CURRENT_TIMESTAMP 
-                      WHERE id = ?
-                    `, [newTaskIndex, planCompleted, planId], (planUpdateErr) => {
-                      if (planUpdateErr) {
-                        db.run('ROLLBACK');
-                        reject(planUpdateErr);
-                        return;
+                    console.log('Plan updated - new index:', newTaskIndex, 'completed:', planCompleted);
+                    
+                    db.run('COMMIT', (commitErr) => {
+                      if (commitErr) {
+                        console.error('Database error committing transaction:', commitErr);
+                        reject(commitErr);
+                      } else {
+                        console.log('Transaction committed successfully for plan:', planId);
+                        Plan.findById(planId).then(resolve).catch(reject);
                       }
-                      
-                      db.run('COMMIT', (commitErr) => {
-                        if (commitErr) {
-                          reject(commitErr);
-                        } else {
-                          Plan.findById(planId).then(resolve).catch(reject);
-                        }
-                      });
                     });
                   });
                 });
               });
+
             });
-          }
+          });
         });
       });
     });

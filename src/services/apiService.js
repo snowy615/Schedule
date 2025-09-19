@@ -167,8 +167,15 @@ class ApiService {
   }
 
   async getPlan(id) {
-    const data = await this.apiCall(`/plans/${id}`);
-    return data.plan;
+    console.log('API Service - Getting plan:', id);
+    try {
+      const data = await this.apiCall(`/plans/${id}`);
+      console.log('API Service - Got plan:', id, data.plan);
+      return data.plan;
+    } catch (error) {
+      console.error('API Service - Failed to get plan:', id, error);
+      throw error;
+    }
   }
 
   async getCurrentTask(planId) {
@@ -177,10 +184,18 @@ class ApiService {
   }
 
   async completeCurrentTask(planId) {
-    const data = await this.apiCall(`/plans/${planId}/complete-task`, {
-      method: 'PATCH',
-    });
-    return data.plan;
+    console.log('API Service - Completing current task for plan:', planId);
+    try {
+      const data = await this.apiCall(`/plans/${planId}/complete-task`, {
+        method: 'PATCH',
+      });
+      console.log('API Service - Task completed successfully for plan:', planId, data.plan);
+      return data.plan;
+    } catch (error) {
+      console.error('API Service - Failed to complete task for plan:', planId, error);
+      // Re-throw the error so it can be handled by the caller
+      throw error;
+    }
   }
 
   // Set individual task completion status

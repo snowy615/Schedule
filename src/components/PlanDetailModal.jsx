@@ -8,6 +8,8 @@ import { usePlans } from '../hooks/usePlans'
 import './PlanDetailModal.css'
 
 function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTask, onDeleteTask, onIndividualTaskComplete }) {
+  console.log('PlanDetailModal - Received plan data:', plan);
+  
   const [currentTaskIndex, setCurrentTaskIndex] = useState(plan.current_task_index || 0)
   const [tasks, setTasks] = useState(plan.tasks || [])
   const [editingTaskId, setEditingTaskId] = useState(null)
@@ -28,6 +30,13 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
   const hasWritePermission = !plan.is_shared || (plan.shared_permissions === 'write');
   // Check if the user has individual permissions for this plan
   const hasIndividualPermission = plan.is_shared && plan.shared_permissions === 'individual';
+  
+  console.log('PlanDetailModal - Permission checks:', {
+    is_shared: plan.is_shared,
+    shared_permissions: plan.shared_permissions,
+    hasWritePermission,
+    hasIndividualPermission
+  });
 
   // Add formatTime function to convert time from HH:MM to a more readable format
   const formatTime = (time) => {
@@ -56,9 +65,17 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
 
   // Calculate currentTask based on currentTaskIndex and tasks array
   const currentTask = tasks.length > 0 && currentTaskIndex < tasks.length ? tasks[currentTaskIndex] : null
-  const isCompleted = hasIndividualPermission ? 
-    (tasks.length > 0 && tasks.every(task => task.completed)) : 
-    (currentTaskIndex >= tasks.length)
+  
+  // Calculate isCompleted state
+  const isCompleted = (() => {
+    if (hasIndividualPermission) {
+      // For individual users, plan is completed when all tasks are completed
+      return tasks.length > 0 && tasks.every(task => task.completed);
+    } else {
+      // For owner/write users, plan is completed when currentTaskIndex >= tasks.length
+      return currentTaskIndex >= tasks.length;
+    }
+  })();
 
   // Calculate progress for individual users
   const calculateProgress = () => {
@@ -78,14 +95,54 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
     tasks.filter(task => task.completed).length : 
     currentTaskIndex;
 
-  const handleCompleteCurrentTask = () => {
-    if (!isCompleted && currentTask) {
-      if (hasIndividualPermission) {
-        // For individual permission, use the individual task completion handler
-        handleIndividualTaskComplete(currentTask, true);
-      } else {
-        // For owner/write permissions, use the standard completion
-        onCompleteTask();
+  const handleCompleteCurrentTask = async () => {
+    console.log('PlanDetailModal - handleCompleteCurrentTask called', {
+      isCompleted,
+      hasIndividualPermission,
+      hasWritePermission,
+      currentTask,
+      currentTaskIndex,
+      tasksLength: tasks.length
+    });
+    
+    // Check if plan is already completed
+    if (isCompleted) {
+      console.log('PlanDetailModal - Plan is already completed');
+      alert('This plan is already completed.');
+      return;
+    }
+    
+    // Check if there are any tasks
+    if (tasks.length === 0) {
+      console.log('PlanDetailModal - Plan has no tasks');
+      alert('This plan has no tasks.');
+      return;
+    }
+    
+    // Check if currentTaskIndex is valid
+    if (currentTaskIndex >= tasks.length) {
+      console.log('PlanDetailModal - Current task index out of bounds', currentTaskIndex, tasks.length);
+      alert('Plan is corrupted: current task index is out of bounds. Please contact support.');
+      return;
+    }
+    
+    // Get the current task
+    const actualCurrentTask = tasks[currentTaskIndex];
+    if (!actualCurrentTask) {
+      console.log('PlanDetailModal - Current task not found', currentTaskIndex);
+      alert('Current task not found. The plan may be corrupted.');
+      return;
+    }
+    
+    if (hasIndividualPermission) {
+      // For individual permission, use the individual task completion handler
+      console.log('PlanDetailModal - Using individual task completion for task:', actualCurrentTask.id);
+      handleIndividualTaskComplete(actualCurrentTask, true);
+    } else if (hasWritePermission) {
+      // For owner/write permissions, use the standard completion
+      console.log('PlanDetailModal - Using standard completion, calling onCompleteTask');
+      try {
+        const result = await onCompleteTask();
         // Optimistically update UI
         setTasks(prev => 
           prev.map((task, index) => 
@@ -93,13 +150,50 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
           )
         );
         setCurrentTaskIndex(prev => prev + 1);
+        return result;
+      } catch (error) {
+        console.error('PlanDetailModal - Failed to complete task:', error);
+        // Revert optimistic update
+        setTasks(prev => 
+          prev.map((task, index) => 
+            index === currentTaskIndex ? { ...task, completed: false } : task
+          )
+        );
+        setCurrentTaskIndex(prev => Math.max(0, prev - 1));
+        
+        // Show specific error messages
+        if (error.message && error.message.includes('Insufficient permissions')) {
+          alert('You do not have permission to modify this plan.');
+        } else if (error.message && error.message.includes('Current task not found')) {
+          alert('Current task not found. The plan may be corrupted.');
+        } else if (error.message && error.message.includes('Plan not found or unauthorized')) {
+          alert('Plan not found or you are not authorized to modify it.');
+        } else if (error.message && error.message.includes('Plan is corrupted')) {
+          alert(error.message);
+        } else {
+          alert('Failed to complete task. Please try again.');
+        }
+        
+        // Re-throw the error so it can be handled by the caller
+        throw error;
       }
+    } else {
+      // User doesn't have permission to complete tasks
+      console.log('PlanDetailModal - User does not have permission to complete tasks');
+      const errorMsg = "You don't have permission to modify this plan";
+      alert(errorMsg);
+      throw new Error(errorMsg);
     }
   }
 
   // Add individual task completion handler
   const handleIndividualTaskComplete = async (task, completed) => {
     if (!hasIndividualPermission) return;
+    
+    // Store the original state for potential rollback
+    const originalCompleted = task.completed;
+    const originalTasks = [...tasks];
+    const originalCurrentTaskIndex = currentTaskIndex;
     
     try {
       const result = await setIndividualTaskStatus(plan.id, task.id, completed);
@@ -127,8 +221,11 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
         onIndividualTaskComplete(result.plan);
       }
     } catch (error) {
-      console.error('Failed to update individual task status:', error)
-      alert('Failed to update task status. Please try again.')
+      console.error('Failed to update individual task status:', error);
+      // Rollback optimistic updates
+      setTasks(originalTasks);
+      setCurrentTaskIndex(originalCurrentTaskIndex);
+      alert('Failed to update task status. Please try again.');
     }
   }
 
@@ -318,7 +415,13 @@ function PlanDetailModal({ plan, onClose, onCompleteTask, onAddTask, onUpdateTas
                     </button>
                   ) : (
                     <button 
-                      onClick={handleCompleteCurrentTask}
+                      onClick={async () => {
+                        try {
+                          await handleCompleteCurrentTask();
+                        } catch (error) {
+                          console.error('Failed to complete task:', error);
+                        }
+                      }}
                       className="complete-task-button"
                       disabled={!hasWritePermission}
                       title={!hasWritePermission ? "You don't have permission to modify this plan" : ""}
