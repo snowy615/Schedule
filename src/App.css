@@ -1,31 +1,25 @@
+/* App.css */
 .app {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.main-content {
-  flex: 1;
-  padding: 2rem;
-  background-color: #0a0a0a;
+  background-color: #1a1a1a;
   color: #ffffff;
 }
 
 .app-loading {
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-color: #0a0a0a;
+  min-height: 100vh;
+  background-color: #1a1a1a;
   color: #ffffff;
 }
 
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #333;
-  border-top: 3px solid #646cff;
+  border: 4px solid #333;
+  border-top: 4px solid #646cff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 1rem;
@@ -36,13 +30,48 @@
   100% { transform: rotate(360deg); }
 }
 
-.app-loading p {
-  color: #888;
-  font-size: 1rem;
+.main-content {
+  padding: 1rem;
+  padding-top: 4rem; /* Account for fixed navigation */
+  min-height: calc(100vh - 4rem);
 }
 
-@media (max-width: 768px) {
-  .main-content {
-    padding: 1rem;
-  }
+/* Error Boundary Styles */
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  padding: 2rem;
+  text-align: center;
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
+.error-boundary h2 {
+  color: #ff6b6b;
+  margin-bottom: 1rem;
+}
+
+.error-boundary p {
+  color: #ccc;
+  margin-bottom: 1.5rem;
+  max-width: 500px;
+  line-height: 1.5;
+}
+
+.error-boundary button {
+  background: #646cff;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.error-boundary button:hover {
+  background: #535bf2;
 }

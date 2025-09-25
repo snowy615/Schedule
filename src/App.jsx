@@ -1,3 +1,4 @@
+import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import HomePage from './pages/HomePage'
@@ -6,6 +7,38 @@ import TodayHourSchedulePage from './pages/TodayHourSchedulePage'
 import Navigation from './components/Navigation'
 import AuthPage from './components/AuthPage'
 import './App.css'
+
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Error caught by boundary:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="error-boundary">
+          <h2>Something went wrong.</h2>
+          <p>We're sorry, but there was an error loading this page.</p>
+          <button onClick={() => window.location.reload()}>
+            Reload Page
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 function AppContent() {
   const { user, loading } = useAuth()
@@ -30,7 +63,11 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/tasks-today" element={<TasksTodayPage />} />
-          <Route path="/hour-schedule" element={<TodayHourSchedulePage />} />
+          <Route path="/hour-schedule" element={
+            <ErrorBoundary>
+              <TodayHourSchedulePage />
+            </ErrorBoundary>
+          } />
         </Routes>
       </main>
     </div>
